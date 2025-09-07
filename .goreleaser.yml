@@ -1,0 +1,234 @@
+# GoReleaser configuration for macOS NAT Manager
+version: 1
+
+project_name: macos-nat-manager
+
+# Git configuration
+git:
+  ignore_tags:
+    - "*-rc*"
+    - "*-beta*"
+    - "*-alpha*"
+
+# Build configuration
+builds:
+  - id: nat-manager
+    main: ./cmd/nat-manager
+    binary: nat-manager
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    tags:
+      - osusergo
+      - netgo
+
+# Archive configuration
+archives:
+  - id: default
+    builds:
+      - nat-manager
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format: tar.gz
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - docs/**/*
+      - completions/**/*
+
+# Checksums
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+# Snapshot configuration for development builds
+snapshot:
+  name_template: "{{ incpatch .Version }}-dev"
+
+# Changelog configuration
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "^style:"
+      - "^refactor:"
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 1
+    - title: 'Enhancements'
+      regexp: "^.*enhance[(\\w)]*:+.*$"
+      order: 2
+    - title: Others
+      order: 999
+
+# Release configuration
+release:
+  github:
+    owner: scttfrdmn
+    name: macos-nat-manager
+  name_template: "v{{.Version}}"
+  header: |
+    ## macOS NAT Manager v{{ .Version }}
+    
+    ### Installation
+    
+    #### Homebrew (Recommended)
+    ```bash
+    brew tap scttfrdmn/tap
+    brew install nat-manager
+    ```
+    
+    #### Direct Download
+    Download the appropriate binary for your system from the assets below.
+    
+    ### Verification
+    Checksums are provided for all binaries. Verify downloads with:
+    ```bash
+    shasum -a 256 -c checksums.txt
+    ```
+  footer: |
+    ### Usage
+    
+    ```bash
+    # Launch interactive TUI
+    sudo nat-manager
+    
+    # CLI usage
+    sudo nat-manager start --external en0 --internal bridge100 --network 192.168.100
+    ```
+    
+    ### Support
+    
+    - 📖 [Full Documentation](https://github.com/scttfrdmn/macos-nat-manager/blob/main/README.md)
+    - 🐛 [Report Issues](https://github.com/scttfrdmn/macos-nat-manager/issues)
+    - 💬 [Discussions](https://github.com/scttfrdmn/macos-nat-manager/discussions)
+  draft: false
+  prerelease: auto
+  mode: replace
+
+# Homebrew tap configuration
+brews:
+  - name: nat-manager
+    repository:
+      owner: scttfrdmn
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    directory: Formula
+    homepage: "https://github.com/scttfrdmn/macos-nat-manager"
+    description: "macOS NAT Manager - True NAT with address translation"
+    license: "MIT"
+    dependencies:
+      - name: dnsmasq
+        type: runtime
+    test: |
+      system "#{bin}/nat-manager --version"
+      system "#{bin}/nat-manager --help"
+    install: |
+      bin.install "nat-manager"
+      
+      # Install documentation
+      doc.install "README.md"
+      doc.install "CHANGELOG.md"
+      
+      # Install completion scripts if they exist
+      if File.exist?("completions/nat-manager.bash")
+        bash_completion.install "completions/nat-manager.bash"
+      end
+      if File.exist?("completions/nat-manager.zsh")
+        zsh_completion.install "completions/nat-manager.zsh"
+      end
+      if File.exist?("completions/nat-manager.fish")
+        fish_completion.install "completions/nat-manager.fish"
+      end
+    caveats: |
+      ⚠️  This tool requires root privileges to modify network configuration.
+      Always run with sudo:
+        sudo nat-manager
+      
+      Dependencies:
+      • dnsmasq: Installed automatically as dependency
+      • pfctl: Built into macOS
+      
+      For help and documentation:
+      https://github.com/scttfrdmn/macos-nat-manager
+
+# Docker images (for CI/testing)
+dockers:
+  - image_templates:
+      - "scttfrdmn/nat-manager:{{ .Version }}-amd64"
+      - "scttfrdmn/nat-manager:latest-amd64"
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: amd64
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.title=macOS NAT Manager"
+      - "--label=org.opencontainers.image.description=True NAT with address translation for macOS"
+      - "--label=org.opencontainers.image.url=https://github.com/scttfrdmn/macos-nat-manager"
+      - "--label=org.opencontainers.image.source=https://github.com/scttfrdmn/macos-nat-manager"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.created={{ time \"2006-01-02T15:04:05Z07:00\" }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+    extra_files:
+      - scripts/docker-entrypoint.sh
+
+# NFPM packages (for future Linux support)
+nfpms:
+  - id: packages
+    package_name: nat-manager
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Your Name
+    homepage: https://github.com/scttfrdmn/macos-nat-manager
+    maintainer: Your Name <your.email@example.com>
+    description: |-
+      macOS NAT Manager provides true Network Address Translation (NAT) 
+      functionality for macOS, unlike built-in Internet Sharing which 
+      operates as a bridge.
+    license: MIT
+    formats:
+      - deb
+      - rpm
+    dependencies:
+      - dnsmasq
+    bindir: /usr/local/bin
+
+# Announce to various platforms
+announce:
+  discord:
+    enabled: false  # Configure if you have a Discord webhook
+  slack:
+    enabled: false  # Configure if you have a Slack webhook
+  twitter:
+    enabled: false  # Configure if you want to tweet releases
+
+# Publisher configuration for GitHub Packages
+publishers:
+  - name: fury.io
+    ids:
+      - packages
+    env:
+      - FURY_TOKEN={{ .Env.FURY_TOKEN }}
+    cmd: curl -F package=@{{ .ArtifactPath }} https://{{ .Env.FURY_TOKEN }}@push.fury.io/{{ .Env.FURY_USER }}/

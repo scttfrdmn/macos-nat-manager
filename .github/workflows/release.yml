@@ -1,0 +1,160 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  GO_VERSION: '1.21'
+
+jobs:
+  test:
+    name: Pre-release Tests
+    runs-on: macos-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        brew install dnsmasq
+        go mod download
+
+    - name: Run tests
+      run: make test
+
+    - name: Build and test
+      run: |
+        make build
+        ./nat-manager --version
+
+  goreleaser:
+    name: GoReleaser
+    runs-on: macos-latest
+    needs: test
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run GoReleaser
+      uses: goreleaser/goreleaser-action@v5
+      with:
+        distribution: goreleaser
+        version: latest
+        args: release --clean
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    runs-on: macos-latest
+    needs: goreleaser
+    if: success()
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Update Homebrew formula
+      env:
+        HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+      run: |
+        # Extract version from tag
+        VERSION=${GITHUB_REF#refs/tags/v}
+        
+        # Calculate SHA256 for the release tarball
+        TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/v${VERSION}.tar.gz"
+        SHA256=$(curl -sL "$TARBALL_URL" | shasum -a 256 | cut -d' ' -f1)
+        
+        # Update the Homebrew formula
+        sed -i '' "s/version \".*\"/version \"${VERSION}\"/" homebrew/nat-manager.rb
+        sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" homebrew/nat-manager.rb
+        sed -i '' "s|url \".*\"|url \"${TARBALL_URL}\"|" homebrew/nat-manager.rb
+        
+        # Commit and push to homebrew tap repository
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        
+        # Clone the homebrew tap repository
+        git clone https://github.com/scttfrdmn/homebrew-tap.git /tmp/homebrew-tap
+        cp homebrew/nat-manager.rb /tmp/homebrew-tap/Formula/
+        
+        cd /tmp/homebrew-tap
+        git add Formula/nat-manager.rb
+        git commit -m "Update nat-manager to v${VERSION}"
+        git push origin main
+
+  notify:
+    name: Notify Release
+    runs-on: macos-latest
+    needs: [goreleaser, update-homebrew]
+    if: success()
+    steps:
+    - name: Get release info
+      id: release_info
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+    - name: Create release announcement
+      run: |
+        cat << EOF > release_notes.md
+        # 🎉 NAT Manager v${{ steps.release_info.outputs.version }} Released!
+        
+        ## Installation
+        
+        ### Homebrew (Recommended)
+        \`\`\`bash
+        brew tap scttfrdmn/tap
+        brew install nat-manager
+        \`\`\`
+        
+        ### Direct Download
+        Download the binary from the [releases page](https://github.com/${{ github.repository }}/releases/tag/v${{ steps.release_info.outputs.version }}).
+        
+        ## What's New
+        
+        See the [CHANGELOG](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed release notes.
+        
+        ## Getting Started
+        
+        \`\`\`bash
+        # Launch TUI
+        sudo nat-manager
+        
+        # Or use CLI
+        sudo nat-manager start --external en0 --internal bridge100
+        \`\`\`
+        
+        ## Support
+        
+        - 📖 [Documentation](https://github.com/${{ github.repository }}/blob/main/README.md)
+        - 🐛 [Issues](https://github.com/${{ github.repository }}/issues)
+        - 💬 [Discussions](https://github.com/${{ github.repository }}/discussions)
+        EOF
+
+    - name: Update release with notes
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: release_notes.md
+        files: |
+          *.tar.gz
+          *.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
