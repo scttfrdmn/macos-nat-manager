@@ -1,28 +1,16 @@
-package main
+// Package nat provides core NAT functionality for macOS systems
+package nat
 
 import (
 	"bufio"
-	"context"
 	"fmt"
-	"log"
 	"net"
-	"os"
 	"os/exec"
-	"os/signal"
 	"regexp"
-	"strconv"
 	"strings"
-	"syscall"
-	"time"
-
-	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/table"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-// NAT Configuration
+// NATConfig represents the configuration for NAT
 type NATConfig struct {
 	ExternalInterface string
 	InternalInterface string
@@ -32,13 +20,14 @@ type NATConfig struct {
 	Active            bool
 }
 
+// DHCPRange represents DHCP IP range configuration
 type DHCPRange struct {
 	Start string
 	End   string
 	Lease string
 }
 
-// Network Interface
+// NetworkInterface represents a network interface
 type NetworkInterface struct {
 	Name   string
 	Type   string
@@ -46,7 +35,7 @@ type NetworkInterface struct {
 	IP     string
 }
 
-// Connection info for monitoring
+// Connection represents a network connection
 type Connection struct {
 	Source      string
 	Destination string
@@ -54,470 +43,33 @@ type Connection struct {
 	State       string
 }
 
-// Application state
-type model struct {
-	state           string
-	interfaces      []NetworkInterface
-	natConfig       *NATConfig
-	connections     []Connection
-	list            list.Model
-	table           table.Model
-	textInput       textinput.Model
-	err             error
-	width           int
-	height          int
-	currentView     string
-	inputField      string
-	dhcpPid         int
+// Manager manages NAT operations
+type Manager struct {
+	config  *NATConfig
+	dhcpPid int
 }
 
-// Styles
-var (
-	titleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("205")).
-			Bold(true).
-			Margin(1, 0)
-
-	helpStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("241")).
-			Margin(1, 0)
-
-	errorStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196")).
-			Bold(true)
-
-	successStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("46")).
-			Bold(true)
-
-	statusStyle = lipgloss.NewStyle().
-			Padding(1, 2).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(lipgloss.Color("62"))
-)
-
-func main() {
-	// Check if running as root
-	if os.Geteuid() != 0 {
-		fmt.Println("This tool requires root privileges. Please run with sudo.")
-		os.Exit(1)
-	}
-
-	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
-	
-	// Handle cleanup on interrupt
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		p.Kill()
-		cleanup()
-		os.Exit(0)
-	}()
-
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+// NewManager creates a new NAT manager
+func NewManager(config *NATConfig) *Manager {
+	return &Manager{
+		config: config,
 	}
 }
 
-func initialModel() model {
-	// Initialize text input
-	ti := textinput.New()
-	ti.Placeholder = "Enter value..."
-	ti.CharLimit = 50
-	ti.Width = 30
-
-	// Initialize list
-	items := []list.Item{}
-	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
-	l.Title = "Network Interfaces"
-
-	// Initialize table
-	columns := []table.Column{
-		{Title: "Source", Width: 20},
-		{Title: "Destination", Width: 20},
-		{Title: "Protocol", Width: 10},
-		{Title: "State", Width: 12},
-	}
-	t := table.New(
-		table.WithColumns(columns),
-		table.WithFocused(true),
-		table.WithHeight(10),
-	)
-
-	return model{
-		state:       "menu",
-		currentView: "menu",
-		list:        l,
-		table:       t,
-		textInput:   ti,
-		natConfig: &NATConfig{
-			InternalNetwork: "192.168.100",
-			DHCPRange: DHCPRange{
-				Start: "192.168.100.100",
-				End:   "192.168.100.200",
-				Lease: "12h",
-			},
-			DNSServers: []string{"8.8.8.8", "8.8.4.4"},
-		},
-	}
-}
-
-func (m model) Init() tea.Cmd {
-	return tea.Batch(
-		getInterfaces,
-		tick(),
-	)
-}
-
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-
-	switch msg := msg.(type) {
-	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.list.SetSize(msg.Width-4, msg.Height-10)
-		return m, nil
-
-	case interfacesMsg:
-		m.interfaces = msg.interfaces
-		items := make([]list.Item, len(m.interfaces))
-		for i, iface := range m.interfaces {
-			items[i] = interfaceItem{iface}
-		}
-		m.list.SetItems(items)
-		return m, nil
-
-	case connectionsMsg:
-		m.connections = msg.connections
-		rows := make([]table.Row, len(m.connections))
-		for i, conn := range m.connections {
-			rows[i] = table.Row{conn.Source, conn.Destination, conn.Protocol, conn.State}
-		}
-		m.table.SetRows(rows)
-		return m, nil
-
-	case tickMsg:
-		if m.natConfig.Active {
-			cmds = append(cmds, getConnections, tick())
-		} else {
-			cmds = append(cmds, tick())
-		}
-
-	case tea.KeyMsg:
-		switch m.currentView {
-		case "menu":
-			return m.handleMenuKeys(msg)
-		case "interfaces":
-			return m.handleInterfaceKeys(msg)
-		case "config":
-			return m.handleConfigKeys(msg)
-		case "monitor":
-			return m.handleMonitorKeys(msg)
-		case "input":
-			return m.handleInputKeys(msg)
-		}
-	}
-
-	return m, tea.Batch(cmds...)
-}
-
-func (m model) handleMenuKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "esc", "ctrl+c":
-		cleanup()
-		return m, tea.Quit
-	case "1":
-		m.currentView = "interfaces"
-		return m, getInterfaces
-	case "2":
-		m.currentView = "config"
-		return m, nil
-	case "3":
-		if m.natConfig.ExternalInterface != "" && m.natConfig.InternalInterface != "" {
-			return m, setupNAT(m.natConfig)
-		}
-		m.err = fmt.Errorf("please configure interfaces first")
-		return m, nil
-	case "4":
-		if m.natConfig.Active {
-			m.currentView = "monitor"
-			return m, getConnections
-		}
-		m.err = fmt.Errorf("NAT is not active")
-		return m, nil
-	case "5":
-		if m.natConfig.Active {
-			return m, teardownNAT(m.natConfig)
-		}
-		m.err = fmt.Errorf("NAT is not active")
-		return m, nil
-	}
-	return m, nil
-}
-
-func (m model) handleInterfaceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "esc":
-		m.currentView = "menu"
-		return m, nil
-	case "e":
-		if len(m.interfaces) > 0 {
-			selected := m.list.SelectedItem().(interfaceItem)
-			m.natConfig.ExternalInterface = selected.iface.Name
-		}
-		return m, nil
-	case "i":
-		if len(m.interfaces) > 0 {
-			selected := m.list.SelectedItem().(interfaceItem)
-			m.natConfig.InternalInterface = selected.iface.Name
-		}
-		return m, nil
-	case "r":
-		return m, getInterfaces
-	}
-
-	var cmd tea.Cmd
-	m.list, cmd = m.list.Update(msg)
-	return m, cmd
-}
-
-func (m model) handleConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "esc":
-		m.currentView = "menu"
-		return m, nil
-	case "1":
-		m.currentView = "input"
-		m.inputField = "network"
-		m.textInput.SetValue(m.natConfig.InternalNetwork)
-		m.textInput.Focus()
-		return m, nil
-	case "2":
-		m.currentView = "input"
-		m.inputField = "dhcp_start"
-		m.textInput.SetValue(m.natConfig.DHCPRange.Start)
-		m.textInput.Focus()
-		return m, nil
-	case "3":
-		m.currentView = "input"
-		m.inputField = "dhcp_end"
-		m.textInput.SetValue(m.natConfig.DHCPRange.End)
-		m.textInput.Focus()
-		return m, nil
-	}
-	return m, nil
-}
-
-func (m model) handleMonitorKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "q", "esc":
-		m.currentView = "menu"
-		return m, nil
-	case "r":
-		return m, getConnections
-	}
-
-	var cmd tea.Cmd
-	m.table, cmd = m.table.Update(msg)
-	return m, cmd
-}
-
-func (m model) handleInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	switch msg.String() {
-	case "enter":
-		value := m.textInput.Value()
-		switch m.inputField {
-		case "network":
-			m.natConfig.InternalNetwork = value
-		case "dhcp_start":
-			m.natConfig.DHCPRange.Start = value
-		case "dhcp_end":
-			m.natConfig.DHCPRange.End = value
-		}
-		m.textInput.Blur()
-		m.textInput.SetValue("")
-		m.currentView = "config"
-		return m, nil
-	case "esc":
-		m.textInput.Blur()
-		m.textInput.SetValue("")
-		m.currentView = "config"
-		return m, nil
-	}
-
-	var cmd tea.Cmd
-	m.textInput, cmd = m.textInput.Update(msg)
-	return m, cmd
-}
-
-func (m model) View() string {
-	switch m.currentView {
-	case "menu":
-		return m.menuView()
-	case "interfaces":
-		return m.interfacesView()
-	case "config":
-		return m.configView()
-	case "monitor":
-		return m.monitorView()
-	case "input":
-		return m.inputView()
-	default:
-		return m.menuView()
-	}
-}
-
-func (m model) menuView() string {
-	var status string
-	if m.natConfig.Active {
-		status = successStyle.Render("🟢 NAT Active")
-	} else {
-		status = errorStyle.Render("🔴 NAT Inactive")
-	}
-
-	content := titleStyle.Render("macOS NAT Manager") + "\n\n"
-	content += statusStyle.Render(status) + "\n\n"
-
-	if m.natConfig.ExternalInterface != "" && m.natConfig.InternalInterface != "" {
-		content += fmt.Sprintf("External: %s → Internal: %s\n", m.natConfig.ExternalInterface, m.natConfig.InternalInterface)
-		content += fmt.Sprintf("Network: %s.0/24\n\n", m.natConfig.InternalNetwork)
-	}
-
-	content += "1. Configure Interfaces\n"
-	content += "2. Configure NAT Settings\n"
-	content += "3. Start NAT\n"
-	content += "4. Monitor Connections\n"
-	content += "5. Stop NAT\n\n"
-
-	if m.err != nil {
-		content += errorStyle.Render(fmt.Sprintf("Error: %s", m.err)) + "\n\n"
-		m.err = nil
-	}
-
-	content += helpStyle.Render("Press number to select, 'q' to quit")
-	return content
-}
-
-func (m model) interfacesView() string {
-	content := titleStyle.Render("Network Interfaces") + "\n\n"
-	content += fmt.Sprintf("External: %s | Internal: %s\n\n", m.natConfig.ExternalInterface, m.natConfig.InternalInterface)
-	content += m.list.View() + "\n\n"
-	content += helpStyle.Render("'e' set external, 'i' set internal, 'r' refresh, 'esc' back")
-	return content
-}
-
-func (m model) configView() string {
-	content := titleStyle.Render("NAT Configuration") + "\n\n"
-	content += fmt.Sprintf("1. Internal Network: %s.0/24\n", m.natConfig.InternalNetwork)
-	content += fmt.Sprintf("2. DHCP Start: %s\n", m.natConfig.DHCPRange.Start)
-	content += fmt.Sprintf("3. DHCP End: %s\n", m.natConfig.DHCPRange.End)
-	content += fmt.Sprintf("   DHCP Lease: %s\n", m.natConfig.DHCPRange.Lease)
-	content += fmt.Sprintf("   DNS Servers: %s\n\n", strings.Join(m.natConfig.DNSServers, ", "))
-	content += helpStyle.Render("Press number to edit, 'esc' to go back")
-	return content
-}
-
-func (m model) monitorView() string {
-	content := titleStyle.Render("Connection Monitor") + "\n\n"
-	content += fmt.Sprintf("Active connections through NAT (%d total):\n\n", len(m.connections))
-	content += m.table.View() + "\n\n"
-	content += helpStyle.Render("'r' refresh, 'esc' back")
-	return content
-}
-
-func (m model) inputView() string {
-	content := titleStyle.Render("Enter Value") + "\n\n"
-	content += fmt.Sprintf("Field: %s\n\n", m.inputField)
-	content += m.textInput.View() + "\n\n"
-	content += helpStyle.Render("Enter to save, Esc to cancel")
-	return content
-}
-
-// Interface item for list
-type interfaceItem struct {
-	iface NetworkInterface
-}
-
-func (i interfaceItem) Title() string       { return i.iface.Name }
-func (i interfaceItem) Description() string { 
-	return fmt.Sprintf("%s - %s (%s)", i.iface.Type, i.iface.IP, i.iface.Status) 
-}
-func (i interfaceItem) FilterValue() string { return i.iface.Name }
-
-// Messages
-type interfacesMsg struct {
-	interfaces []NetworkInterface
-}
-
-type connectionsMsg struct {
-	connections []Connection
-}
-
-type tickMsg time.Time
-
-type natResultMsg struct {
-	success bool
-	err     error
-}
-
-// Commands
-func tick() tea.Cmd {
-	return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
-}
-
-func getInterfaces() tea.Msg {
-	interfaces, err := listNetworkInterfaces()
-	if err != nil {
-		return interfacesMsg{interfaces: []NetworkInterface{}}
-	}
-	return interfacesMsg{interfaces: interfaces}
-}
-
-func getConnections() tea.Msg {
-	connections, _ := getActiveConnections()
-	return connectionsMsg{connections: connections}
-}
-
-func setupNAT(config *NATConfig) tea.Cmd {
-	return func() tea.Msg {
-		err := startNAT(config)
-		if err != nil {
-			return natResultMsg{success: false, err: err}
-		}
-		config.Active = true
-		return natResultMsg{success: true, err: nil}
-	}
-}
-
-func teardownNAT(config *NATConfig) tea.Cmd {
-	return func() tea.Msg {
-		err := stopNAT(config)
-		if err != nil {
-			return natResultMsg{success: false, err: err}
-		}
-		config.Active = false
-		return natResultMsg{success: true, err: nil}
-	}
-}
-
-// System functions
-func listNetworkInterfaces() ([]NetworkInterface, error) {
+// GetNetworkInterfaces returns a list of available network interfaces
+func (m *Manager) GetNetworkInterfaces() ([]NetworkInterface, error) {
 	interfaces, err := net.Interfaces()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get network interfaces: %w", err)
 	}
 
 	var result []NetworkInterface
 	for _, iface := range interfaces {
-		if iface.Flags&net.FlagLoopback != 0 {
+		addrs, err := iface.Addrs()
+		if err != nil {
 			continue
 		}
 
-		addrs, _ := iface.Addrs()
 		var ip string
 		for _, addr := range addrs {
 			if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
@@ -528,23 +80,14 @@ func listNetworkInterfaces() ([]NetworkInterface, error) {
 			}
 		}
 
-		status := "Down"
+		status := "down"
 		if iface.Flags&net.FlagUp != 0 {
-			status = "Up"
-		}
-
-		ifaceType := "Ethernet"
-		if strings.Contains(iface.Name, "en") {
-			ifaceType = "Ethernet"
-		} else if strings.Contains(iface.Name, "bridge") {
-			ifaceType = "Bridge"
-		} else if strings.Contains(iface.Name, "utun") {
-			ifaceType = "VPN"
+			status = "up"
 		}
 
 		result = append(result, NetworkInterface{
 			Name:   iface.Name,
-			Type:   ifaceType,
+			Type:   getInterfaceType(iface.Name),
 			Status: status,
 			IP:     ip,
 		})
@@ -553,110 +96,89 @@ func listNetworkInterfaces() ([]NetworkInterface, error) {
 	return result, nil
 }
 
-func startNAT(config *NATConfig) error {
-	// Enable IP forwarding
-	if err := exec.Command("sysctl", "-w", "net.inet.ip.forwarding=1").Run(); err != nil {
-		return fmt.Errorf("failed to enable IP forwarding: %w", err)
+// StartNAT starts the NAT service
+func (m *Manager) StartNAT() error {
+	if m.config == nil {
+		return fmt.Errorf("NAT config is nil")
 	}
 
 	// Create bridge interface if it doesn't exist
-	if strings.HasPrefix(config.InternalInterface, "bridge") {
-		exec.Command("ifconfig", config.InternalInterface, "destroy").Run() // Clean up if exists
-		if err := exec.Command("ifconfig", config.InternalInterface, "create").Run(); err != nil {
-			return fmt.Errorf("failed to create bridge interface: %w", err)
-		}
+	if strings.HasPrefix(m.config.InternalInterface, "bridge") {
+		cmd := exec.Command("ifconfig", m.config.InternalInterface, "create")
+		_ = cmd.Run() // Interface might already exist, which is fine
 
 		// Configure bridge interface
-		bridgeIP := fmt.Sprintf("%s.1/24", config.InternalNetwork)
-		if err := exec.Command("ifconfig", config.InternalInterface, bridgeIP, "up").Run(); err != nil {
+		bridgeIP := m.config.InternalNetwork + ".1"
+		cmd = exec.Command("ifconfig", m.config.InternalInterface, "inet", bridgeIP, "netmask", "255.255.255.0")
+		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to configure bridge interface: %w", err)
 		}
 	}
 
-	// Create pfctl NAT rules
-	natRules := fmt.Sprintf(`nat on %s from %s.0/24 to any -> (%s)
-pass from %s.0/24 to any keep state
-pass to %s.0/24 keep state`,
-		config.ExternalInterface,
-		config.InternalNetwork,
-		config.ExternalInterface,
-		config.InternalNetwork,
-		config.InternalNetwork)
-
-	// Write rules to temporary file
-	rulesFile := "/tmp/nat_rules.conf"
-	if err := os.WriteFile(rulesFile, []byte(natRules), 0644); err != nil {
-		return fmt.Errorf("failed to write NAT rules: %w", err)
+	// Enable IP forwarding
+	cmd := exec.Command("sysctl", "-w", "net.inet.ip.forwarding=1")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to enable IP forwarding: %w", err)
 	}
 
-	// Load pfctl rules
-	if err := exec.Command("pfctl", "-f", rulesFile).Run(); err != nil {
-		return fmt.Errorf("failed to load pfctl rules: %w", err)
-	}
+	// Set up NAT rules with pfctl
+	natRule := fmt.Sprintf("nat on %s from %s.0/24 to any -> (%s)",
+		m.config.ExternalInterface, m.config.InternalNetwork, m.config.ExternalInterface)
 
-	// Enable pfctl
-	if err := exec.Command("pfctl", "-e").Run(); err != nil {
+	cmd = exec.Command("pfctl", "-e")
+	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to enable pfctl: %w", err)
 	}
 
-	// Start DHCP server using dnsmasq
-	return startDHCPServer(config)
-}
-
-func startDHCPServer(config *NATConfig) error {
-	// Check if dnsmasq is available
-	if _, err := exec.LookPath("dnsmasq"); err != nil {
-		return fmt.Errorf("dnsmasq not found. Install with: brew install dnsmasq")
+	// Write NAT rule to pfctl
+	cmd = exec.Command("sh", "-c", fmt.Sprintf("echo '%s' | pfctl -f -", natRule))
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to set NAT rule: %w", err)
 	}
 
-	// Kill any existing dnsmasq processes
-	exec.Command("killall", "dnsmasq").Run()
-
-	// Start dnsmasq
-	args := []string{
-		fmt.Sprintf("--interface=%s", config.InternalInterface),
-		fmt.Sprintf("--dhcp-range=%s,%s,%s", config.DHCPRange.Start, config.DHCPRange.End, config.DHCPRange.Lease),
-		fmt.Sprintf("--dhcp-option=3,%s.1", config.InternalNetwork), // Gateway
-		fmt.Sprintf("--dhcp-option=6,%s", strings.Join(config.DNSServers, ",")), // DNS
-		"--bind-interfaces",
-		"--except-interface=lo0",
-		"--no-daemon",
-	}
-
-	cmd := exec.Command("dnsmasq", args...)
-	if err := cmd.Start(); err != nil {
+	// Start DHCP server
+	if err := m.startDHCPServer(); err != nil {
 		return fmt.Errorf("failed to start DHCP server: %w", err)
 	}
 
+	m.config.Active = true
 	return nil
 }
 
-func stopNAT(config *NATConfig) error {
+// StopNAT stops the NAT service
+func (m *Manager) StopNAT() error {
+	if m.config == nil {
+		return fmt.Errorf("NAT config is nil")
+	}
+
 	// Disable pfctl
-	exec.Command("pfctl", "-d").Run()
+	_ = exec.Command("pfctl", "-d").Run()
 
 	// Destroy bridge interface if we created it
-	if strings.HasPrefix(config.InternalInterface, "bridge") {
-		exec.Command("ifconfig", config.InternalInterface, "destroy").Run()
+	if strings.HasPrefix(m.config.InternalInterface, "bridge") {
+		_ = exec.Command("ifconfig", m.config.InternalInterface, "destroy").Run()
 	}
 
 	// Stop DHCP server
-	exec.Command("killall", "dnsmasq").Run()
+	_ = exec.Command("killall", "dnsmasq").Run()
 
 	// Disable IP forwarding
-	exec.Command("sysctl", "-w", "net.inet.ip.forwarding=0").Run()
+	_ = exec.Command("sysctl", "-w", "net.inet.ip.forwarding=0").Run()
 
+	m.config.Active = false
 	return nil
 }
 
-func getActiveConnections() ([]Connection, error) {
+// GetActiveConnections returns active network connections
+func (m *Manager) GetActiveConnections() ([]Connection, error) {
+	connections := make([]Connection, 0)
+	
 	cmd := exec.Command("netstat", "-n")
 	output, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		// Return empty slice instead of error to avoid breaking status
+		return connections, nil
 	}
-
-	var connections []Connection
 	scanner := bufio.NewScanner(strings.NewReader(string(output)))
 	re := regexp.MustCompile(`^(tcp|udp)\s+\d+\s+\d+\s+(\S+)\s+(\S+)\s+(\S+)`)
 
@@ -676,9 +198,128 @@ func getActiveConnections() ([]Connection, error) {
 	return connections, nil
 }
 
-func cleanup() {
-	// Clean up any running processes
-	exec.Command("pfctl", "-d").Run()
-	exec.Command("killall", "dnsmasq").Run()
-	exec.Command("sysctl", "-w", "net.inet.ip.forwarding=0").Run()
+// IsActive returns whether NAT is currently active
+func (m *Manager) IsActive() bool {
+	if m.config == nil {
+		return false
+	}
+	return m.config.Active
+}
+
+// GetConfig returns the current NAT configuration
+func (m *Manager) GetConfig() *NATConfig {
+	return m.config
+}
+
+// Cleanup performs cleanup operations
+func (m *Manager) Cleanup() {
+	_ = exec.Command("pfctl", "-d").Run()
+	_ = exec.Command("killall", "dnsmasq").Run()
+	_ = exec.Command("sysctl", "-w", "net.inet.ip.forwarding=0").Run()
+}
+
+// startDHCPServer starts the DHCP server using dnsmasq
+func (m *Manager) startDHCPServer() error {
+	dhcpRange := fmt.Sprintf("%s.%s,%s.%s,%s",
+		m.config.InternalNetwork, m.config.DHCPRange.Start,
+		m.config.InternalNetwork, m.config.DHCPRange.End,
+		m.config.DHCPRange.Lease)
+
+	args := []string{
+		"--interface=" + m.config.InternalInterface,
+		"--dhcp-range=" + dhcpRange,
+		"--no-daemon",
+		"--log-queries",
+		"--log-dhcp",
+	}
+
+	// Add DNS servers
+	for _, dns := range m.config.DNSServers {
+		args = append(args, "--server="+dns)
+	}
+
+	cmd := exec.Command("dnsmasq", args...)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start dnsmasq: %w", err)
+	}
+
+	m.dhcpPid = cmd.Process.Pid
+	return nil
+}
+
+// ConnectedDevice represents a connected device
+type ConnectedDevice struct {
+	IP        string
+	MAC       string
+	Hostname  string
+	LeaseTime string
+}
+
+// Status represents NAT status information  
+type Status struct {
+	Active             bool
+	Running            bool // Alias for Active for backward compatibility
+	ExternalIP         string
+	Uptime             string
+	ConnectedDevices   []ConnectedDevice
+	ActiveConnections  []Connection
+	BytesIn            uint64
+	BytesOut           uint64
+	IPForwarding       bool
+	PFCTLEnabled       bool
+	DHCPRunning        bool
+}
+
+// GetStatus returns current NAT status
+func (m *Manager) GetStatus() (*Status, error) {
+	connections, _ := m.GetActiveConnections()
+	if connections == nil {
+		connections = []Connection{}
+	}
+	
+	isActive := m.IsActive()
+	status := &Status{
+		Active:             isActive,
+		Running:            isActive, // Alias for backward compatibility
+		ExternalIP:         "N/A", 
+		Uptime:             "N/A",
+		ConnectedDevices:   []ConnectedDevice{},
+		ActiveConnections:  connections,
+		BytesIn:            0,
+		BytesOut:           0,
+		IPForwarding:       isActive,
+		PFCTLEnabled:       isActive,
+		DHCPRunning:        isActive,
+	}
+	
+	if m.config == nil {
+		return status, nil
+	}
+	
+	// Try to get external IP
+	if m.config.ExternalInterface != "" {
+		cmd := exec.Command("ifconfig", m.config.ExternalInterface)
+		if output, err := cmd.Output(); err == nil {
+			re := regexp.MustCompile(`inet (\d+\.\d+\.\d+\.\d+)`)
+			if matches := re.FindStringSubmatch(string(output)); len(matches) > 1 {
+				status.ExternalIP = matches[1]
+			}
+		}
+	}
+	
+	return status, nil
+}
+
+// getInterfaceType determines the type of network interface
+func getInterfaceType(name string) string {
+	if strings.HasPrefix(name, "en") {
+		return "Ethernet"
+	} else if strings.HasPrefix(name, "wi") || strings.HasPrefix(name, "wlan") {
+		return "WiFi"
+	} else if strings.HasPrefix(name, "bridge") {
+		return "Bridge"
+	} else if strings.HasPrefix(name, "lo") {
+		return "Loopback"
+	}
+	return "Other"
 }

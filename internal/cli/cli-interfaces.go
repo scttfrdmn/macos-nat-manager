@@ -1,3 +1,4 @@
+// Package cli provides command line interface commands for the NAT manager
 package cli
 
 import (
@@ -28,8 +29,10 @@ Example:
   nat-manager interfaces
   nat-manager interfaces --all          # Show all interfaces including loopback
   nat-manager interfaces --type bridge  # Filter by interface type`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		interfaces, err := nat.ListInterfaces(showAll)
+	RunE: func(_ *cobra.Command, _ []string) error {
+		// Create a temporary manager to get interfaces
+		manager := nat.NewManager(nil)
+		interfaces, err := manager.GetNetworkInterfaces()
 		if err != nil {
 			return fmt.Errorf("failed to list interfaces: %w", err)
 		}

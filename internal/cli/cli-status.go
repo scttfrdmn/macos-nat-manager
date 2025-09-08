@@ -26,7 +26,7 @@ var statusCmd = &cobra.Command{
 Example:
   nat-manager status
   nat-manager status --json  # JSON output for scripting`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		// Load config
 		cfg, err := config.Load()
 		if err != nil {
@@ -34,8 +34,22 @@ Example:
 			cfg = config.Default()
 		}
 
+		// Convert config to NAT config
+		natConfig := &nat.NATConfig{
+			ExternalInterface: cfg.ExternalInterface,
+			InternalInterface: cfg.InternalInterface,
+			InternalNetwork:   cfg.InternalNetwork,
+			DHCPRange: nat.DHCPRange{
+				Start: cfg.DHCPRange.Start,
+				End:   cfg.DHCPRange.End,
+				Lease: cfg.DHCPRange.Lease,
+			},
+			DNSServers: cfg.DNSServers,
+			Active:     cfg.Active,
+		}
+
 		// Create NAT manager
-		manager := nat.NewManager(cfg)
+		manager := nat.NewManager(natConfig)
 
 		// Get status
 		status, err := manager.GetStatus()
@@ -44,14 +58,14 @@ Example:
 		}
 
 		if jsonOutput {
-			return printStatusJSON(status)
+			return printStatusJSON(manager, status)
 		}
 
-		return printStatusHuman(status)
+		return printStatusHuman(manager, status)
 	},
 }
 
-func printStatusHuman(status *nat.Status) error {
+func printStatusHuman(manager *nat.Manager, status *nat.Status) error {
 	// Overall status
 	if status.Running {
 		fmt.Printf("🟢 NAT Status: %s\n", "ACTIVE")
@@ -60,11 +74,16 @@ func printStatusHuman(status *nat.Status) error {
 		return nil
 	}
 
+	config := manager.GetConfig()
+	if config == nil {
+		return fmt.Errorf("no NAT configuration found")
+	}
+
 	fmt.Printf("\n📡 Configuration:\n")
-	fmt.Printf("   External Interface: %s (%s)\n", status.Config.ExternalInterface, status.ExternalIP)
-	fmt.Printf("   Internal Interface: %s (%s.1/24)\n", status.Config.InternalInterface, status.Config.InternalNetwork)
-	fmt.Printf("   DHCP Range: %s - %s\n", status.Config.DHCPRange.Start, status.Config.DHCPRange.End)
-	fmt.Printf("   DNS Servers: %s\n", strings.Join(status.Config.DNSServers, ", "))
+	fmt.Printf("   External Interface: %s (%s)\n", config.ExternalInterface, status.ExternalIP)
+	fmt.Printf("   Internal Interface: %s (%s.1/24)\n", config.InternalInterface, config.InternalNetwork)
+	fmt.Printf("   DHCP Range: %s - %s\n", config.DHCPRange.Start, config.DHCPRange.End)
+	fmt.Printf("   DNS Servers: %s\n", strings.Join(config.DNSServers, ", "))
 
 	fmt.Printf("\n🔧 System Status:\n")
 	fmt.Printf("   IP Forwarding: %s\n", formatBool(status.IPForwarding))
@@ -96,7 +115,12 @@ func printStatusHuman(status *nat.Status) error {
 	return nil
 }
 
-func printStatusJSON(status *nat.Status) error {
+func printStatusJSON(manager *nat.Manager, status *nat.Status) error {
+	config := manager.GetConfig()
+	if config == nil {
+		return fmt.Errorf("no NAT configuration found")
+	}
+
 	// For JSON output, you'd typically use encoding/json
 	// This is a simplified version
 	fmt.Printf(`{
@@ -115,10 +139,10 @@ func printStatusJSON(status *nat.Status) error {
   "bytes_out": %d
 }`,
 		status.Running,
-		status.Config.ExternalInterface,
-		status.Config.InternalInterface,
+		config.ExternalInterface,
+		config.InternalInterface,
 		status.ExternalIP,
-		status.Config.InternalNetwork,
+		config.InternalNetwork,
 		status.IPForwarding,
 		status.PFCTLEnabled,
 		status.DHCPRunning,

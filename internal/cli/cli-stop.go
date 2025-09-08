@@ -27,7 +27,7 @@ This will:
 Example:
   nat-manager stop
   nat-manager stop --force  # Force stop even if some cleanup fails`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		// Load config
 		cfg, err := config.Load()
 		if err != nil {
@@ -38,21 +38,30 @@ Example:
 			cfg = config.Default()
 		}
 
+		// Convert config to NAT config
+		natConfig := &nat.NATConfig{
+			ExternalInterface: cfg.ExternalInterface,
+			InternalInterface: cfg.InternalInterface,
+			InternalNetwork:   cfg.InternalNetwork,
+			DHCPRange: nat.DHCPRange{
+				Start: cfg.DHCPRange.Start,
+				End:   cfg.DHCPRange.End,
+				Lease: cfg.DHCPRange.Lease,
+			},
+			DNSServers: cfg.DNSServers,
+			Active:     cfg.Active,
+		}
+
 		// Create NAT manager
-		manager := nat.NewManager(cfg)
+		manager := nat.NewManager(natConfig)
 
 		// Check if running
-		if running, err := manager.IsRunning(); err != nil {
-			if !force {
-				return fmt.Errorf("failed to check NAT status: %w", err)
-			}
-			fmt.Printf("Warning: could not check NAT status: %v\n", err)
-		} else if !running && !force {
+		if !manager.IsActive() && !force {
 			return fmt.Errorf("NAT is not running")
 		}
 
 		// Stop NAT
-		if err := manager.Stop(); err != nil {
+		if err := manager.StopNAT(); err != nil {
 			if !force {
 				return fmt.Errorf("failed to stop NAT: %w", err)
 			}

@@ -13,8 +13,11 @@ import (
 )
 
 var (
+	// Version is the application version, set at build time
 	Version = "dev"
+	// Commit is the git commit hash, set at build time
 	Commit  = "none"
+	// Date is the build date, set at build time
 	Date    = "unknown"
 )
 
@@ -46,7 +49,7 @@ Features:
 		if len(args) == 0 {
 			launchTUI()
 		} else {
-			cmd.Help()
+			_ = cmd.Help()
 		}
 	},
 }
@@ -65,8 +68,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config-path", "", "path to store configuration")
 
 	// Bind flags to viper
-	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
-	viper.BindPFlag("config-path", rootCmd.PersistentFlags().Lookup("config-path"))
+	_ = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+	_ = viper.BindPFlag("config-path", rootCmd.PersistentFlags().Lookup("config-path"))
 }
 
 // initConfig reads in config file and ENV variables.

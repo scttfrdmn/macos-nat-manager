@@ -35,7 +35,7 @@ This will:
 Example:
   nat-manager start --external en0 --internal bridge100 --network 192.168.100
   nat-manager start -e en1 -i bridge101 -n 10.0.1 --dhcp-start 10.0.1.100 --dhcp-end 10.0.1.200`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		// Load existing config
 		cfg, err := config.Load()
 		if err != nil {
@@ -70,18 +70,30 @@ Example:
 			return fmt.Errorf("internal interface is required (use --internal or -i)")
 		}
 
+		// Convert config to NAT config
+		natConfig := &nat.NATConfig{
+			ExternalInterface: cfg.ExternalInterface,
+			InternalInterface: cfg.InternalInterface,
+			InternalNetwork:   cfg.InternalNetwork,
+			DHCPRange: nat.DHCPRange{
+				Start: cfg.DHCPRange.Start,
+				End:   cfg.DHCPRange.End,
+				Lease: cfg.DHCPRange.Lease,
+			},
+			DNSServers: cfg.DNSServers,
+			Active:     cfg.Active,
+		}
+
 		// Create NAT manager
-		manager := nat.NewManager(cfg)
+		manager := nat.NewManager(natConfig)
 
 		// Check if already running
-		if running, err := manager.IsRunning(); err != nil {
-			return fmt.Errorf("failed to check NAT status: %w", err)
-		} else if running {
+		if manager.IsActive() {
 			return fmt.Errorf("NAT is already running")
 		}
 
 		// Start NAT
-		if err := manager.Start(); err != nil {
+		if err := manager.StartNAT(); err != nil {
 			return fmt.Errorf("failed to start NAT: %w", err)
 		}
 
@@ -114,6 +126,6 @@ func init() {
 	startCmd.Flags().StringSliceVar(&dnsServers, "dns", []string{}, "DNS servers (comma-separated)")
 
 	// Mark required flags with helpful messages
-	startCmd.MarkFlagRequired("external")
-	startCmd.MarkFlagRequired("internal")
+	_ = startCmd.MarkFlagRequired("external")
+	_ = startCmd.MarkFlagRequired("internal")
 }

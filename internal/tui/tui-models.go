@@ -2,7 +2,6 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/table"
@@ -20,7 +19,7 @@ type Model struct {
 	manager     *nat.Manager
 	state       string
 	interfaces  []nat.NetworkInterface
-	connections []nat.ActiveConnection
+	connections []nat.Connection
 	list        list.Model
 	table       table.Model
 	textInput   textinput.Model
@@ -34,7 +33,7 @@ type Model struct {
 // Init initializes the model
 func (m Model) Init() tea.Cmd {
 	return tea.Batch(
-		getInterfaces,
+		getInterfaces(m.manager),
 		tick(),
 	)
 }
@@ -77,7 +76,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tickMsg:
-		if running, _ := m.manager.IsRunning(); running {
+		if m.manager.IsActive() {
 			cmds = append(cmds, getConnections(m.manager), tick())
 		} else {
 			cmds = append(cmds, tick())
@@ -108,7 +107,7 @@ func (m Model) handleMenuKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "1":
 		m.currentView = "interfaces"
-		return m, getInterfaces
+		return m, getInterfaces(m.manager)
 	case "2":
 		m.currentView = "config"
 		return m, nil
@@ -119,14 +118,14 @@ func (m Model) handleMenuKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.err = fmt.Errorf("please configure interfaces first")
 		return m, nil
 	case "4":
-		if running, _ := m.manager.IsRunning(); running {
+		if m.manager.IsActive() {
 			m.currentView = "monitor"
 			return m, getConnections(m.manager)
 		}
 		m.err = fmt.Errorf("NAT is not active")
 		return m, nil
 	case "5":
-		if running, _ := m.manager.IsRunning(); running {
+		if m.manager.IsActive() {
 			return m, teardownNAT(m.manager)
 		}
 		m.err = fmt.Errorf("NAT is not active")
@@ -153,7 +152,7 @@ func (m Model) handleInterfaceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "r":
-		return m, getInterfaces
+		return m, getInterfaces(m.manager)
 	}
 
 	var cmd tea.Cmd

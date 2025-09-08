@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -38,20 +39,32 @@ Example:
   nat-manager monitor --interval 5s --max 50  # Custom refresh and limit
   nat-manager monitor --devices               # Show connected devices
   nat-manager monitor --follow                # Continuous monitoring mode`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, args []string) error {
 		// Load config
 		cfg, err := config.Load()
 		if err != nil {
 			return fmt.Errorf("failed to load config: %w", err)
 		}
 
+		// Convert config to NAT config
+		natConfig := &nat.NATConfig{
+			ExternalInterface: cfg.ExternalInterface,
+			InternalInterface: cfg.InternalInterface,
+			InternalNetwork:   cfg.InternalNetwork,
+			DHCPRange: nat.DHCPRange{
+				Start: cfg.DHCPRange.Start,
+				End:   cfg.DHCPRange.End,
+				Lease: cfg.DHCPRange.Lease,
+			},
+			DNSServers: cfg.DNSServers,
+			Active:     cfg.Active,
+		}
+
 		// Create NAT manager
-		manager := nat.NewManager(cfg)
+		manager := nat.NewManager(natConfig)
 
 		// Check if NAT is running
-		if running, err := manager.IsRunning(); err != nil {
-			return fmt.Errorf("failed to check NAT status: %w", err)
-		} else if !running {
+		if !manager.IsActive() {
 			return fmt.Errorf("NAT is not running. Start it first with 'nat-manager start'")
 		}
 
@@ -69,12 +82,17 @@ func runSnapshotMode(manager *nat.Manager) error {
 		return fmt.Errorf("failed to get status: %w", err)
 	}
 
+	config := manager.GetConfig()
+	if config == nil {
+		return fmt.Errorf("no NAT configuration found")
+	}
+
 	fmt.Printf("📊 NAT Monitor - %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	fmt.Printf("External: %s (%s) → Internal: %s (%s.1/24)\n\n",
-		status.Config.ExternalInterface,
+		config.ExternalInterface,
 		status.ExternalIP,
-		status.Config.InternalInterface,
-		status.Config.InternalNetwork)
+		config.InternalInterface,
+		config.InternalNetwork)
 
 	if showDevices && len(status.ConnectedDevices) > 0 {
 		fmt.Printf("📱 Connected Devices (%d):\n", len(status.ConnectedDevices))
@@ -172,14 +190,19 @@ func displayMonitorData(manager *nat.Manager) error {
 		return err
 	}
 
+	config := manager.GetConfig()
+	if config == nil {
+		return fmt.Errorf("no NAT configuration found")
+	}
+
 	fmt.Printf("📊 NAT Monitor - %s (Uptime: %s)\n",
 		time.Now().Format("15:04:05"),
 		status.Uptime)
 	fmt.Printf("External: %s (%s) → Internal: %s (%s.1/24)\n",
-		status.Config.ExternalInterface,
+		config.ExternalInterface,
 		status.ExternalIP,
-		status.Config.InternalInterface,
-		status.Config.InternalNetwork)
+		config.InternalInterface,
+		config.InternalNetwork)
 	fmt.Printf("Traffic: %s in, %s out | Devices: %d | Connections: %d\n\n",
 		formatBytes(status.BytesIn),
 		formatBytes(status.BytesOut),

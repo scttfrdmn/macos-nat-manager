@@ -1,3 +1,4 @@
+// Package tui provides the terminal user interface for the NAT manager
 package tui
 
 import (
@@ -24,9 +25,23 @@ type App struct {
 
 // NewApp creates a new TUI application
 func NewApp(cfg *config.Config) *App {
+	// Convert config.Config to nat.NATConfig
+	natConfig := &nat.NATConfig{
+		ExternalInterface: cfg.ExternalInterface,
+		InternalInterface: cfg.InternalInterface,
+		InternalNetwork:   cfg.InternalNetwork,
+		DHCPRange: nat.DHCPRange{
+			Start: cfg.DHCPRange.Start,
+			End:   cfg.DHCPRange.End,
+			Lease: cfg.DHCPRange.Lease,
+		},
+		DNSServers: cfg.DNSServers,
+		Active:     cfg.Active,
+	}
+	
 	return &App{
 		config:  cfg,
-		manager: nat.NewManager(cfg),
+		manager: nat.NewManager(natConfig),
 	}
 }
 
@@ -87,12 +102,13 @@ func (a *App) initialModel() Model {
 
 func (a *App) cleanup() {
 	// Attempt to stop NAT service if running
-	if running, _ := a.manager.IsRunning(); running {
+	if a.manager.IsActive() {
 		log.Println("Stopping NAT service...")
-		if err := a.manager.Stop(); err != nil {
+		if err := a.manager.StopNAT(); err != nil {
 			log.Printf("Warning: failed to stop NAT: %v", err)
 		}
 	}
+	a.manager.Cleanup()
 }
 
 // Messages for the TUI
@@ -101,7 +117,7 @@ type interfacesMsg struct {
 	interfaces []nat.NetworkInterface
 }
 type connectionsMsg struct {
-	connections []nat.ActiveConnection
+	connections []nat.Connection
 }
 type natResultMsg struct {
 	success bool
@@ -115,27 +131,29 @@ func tick() tea.Cmd {
 	})
 }
 
-func getInterfaces() tea.Msg {
-	interfaces, err := nat.ListInterfaces(false)
-	if err != nil {
-		return interfacesMsg{interfaces: []nat.NetworkInterface{}}
+func getInterfaces(manager *nat.Manager) tea.Cmd {
+	return func() tea.Msg {
+		interfaces, err := manager.GetNetworkInterfaces()
+		if err != nil {
+			return interfacesMsg{interfaces: []nat.NetworkInterface{}}
+		}
+		return interfacesMsg{interfaces: interfaces}
 	}
-	return interfacesMsg{interfaces: interfaces}
 }
 
 func getConnections(manager *nat.Manager) tea.Cmd {
 	return func() tea.Msg {
-		status, err := manager.GetStatus()
+		connections, err := manager.GetActiveConnections()
 		if err != nil {
-			return connectionsMsg{connections: []nat.ActiveConnection{}}
+			return connectionsMsg{connections: []nat.Connection{}}
 		}
-		return connectionsMsg{connections: status.ActiveConnections}
+		return connectionsMsg{connections: connections}
 	}
 }
 
 func setupNAT(manager *nat.Manager) tea.Cmd {
 	return func() tea.Msg {
-		err := manager.Start()
+		err := manager.StartNAT()
 		if err != nil {
 			return natResultMsg{success: false, err: err}
 		}
@@ -145,7 +163,7 @@ func setupNAT(manager *nat.Manager) tea.Cmd {
 
 func teardownNAT(manager *nat.Manager) tea.Cmd {
 	return func() tea.Msg {
-		err := manager.Stop()
+		err := manager.StopNAT()
 		if err != nil {
 			return natResultMsg{success: false, err: err}
 		}

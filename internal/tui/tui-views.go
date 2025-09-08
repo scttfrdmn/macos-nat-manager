@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/scttfrdmn/macos-nat-manager/internal/nat"
 )
 
 // Styles
@@ -52,7 +53,7 @@ func (m Model) View() string {
 
 func (m Model) menuView() string {
 	var status string
-	if running, _ := m.manager.IsRunning(); running {
+	if m.manager.IsActive() {
 		status = successStyle.Render("🟢 NAT Active")
 	} else {
 		status = errorStyle.Render("🔴 NAT Inactive")
@@ -76,7 +77,6 @@ func (m Model) menuView() string {
 
 	if m.err != nil {
 		content += errorStyle.Render(fmt.Sprintf("Error: %s", m.err)) + "\n\n"
-		m.err = nil
 	}
 
 	content += helpStyle.Render("Press number to select, 'q' to quit")
