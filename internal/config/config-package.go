@@ -16,7 +16,7 @@ type Config struct {
 	InternalNetwork   string    `yaml:"internal_network" json:"internal_network"`
 	DHCPRange         DHCPRange `yaml:"dhcp_range" json:"dhcp_range"`
 	DNSServers        []string  `yaml:"dns_servers" json:"dns_servers"`
-	
+
 	// Runtime fields (not saved to config)
 	Active bool `yaml:"-" json:"active"`
 }

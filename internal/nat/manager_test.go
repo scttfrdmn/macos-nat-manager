@@ -46,7 +46,7 @@ func TestManagerWithNilConfig(t *testing.T) {
 
 func TestGetNetworkInterfaces(t *testing.T) {
 	manager := NewManager(nil)
-	
+
 	interfaces, err := manager.GetNetworkInterfaces()
 	if err != nil {
 		t.Errorf("GetNetworkInterfaces failed: %v", err)
@@ -85,7 +85,7 @@ func TestGetStatus(t *testing.T) {
 	}
 
 	manager := NewManager(config)
-	
+
 	status, err := manager.GetStatus()
 	if err != nil {
 		t.Errorf("GetStatus failed: %v", err)
@@ -115,7 +115,7 @@ func TestGetStatus(t *testing.T) {
 
 func TestGetActiveConnections(t *testing.T) {
 	manager := NewManager(nil)
-	
+
 	connections, err := manager.GetActiveConnections()
 	if err != nil {
 		t.Errorf("GetActiveConnections failed: %v", err)

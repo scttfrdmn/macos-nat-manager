@@ -85,31 +85,31 @@ func (m Model) menuView() string {
 
 func (m Model) interfacesView() string {
 	content := titleStyle.Render("Network Interfaces") + "\n\n"
-	
+
 	if m.config.ExternalInterface != "" || m.config.InternalInterface != "" {
-		content += fmt.Sprintf("Current selection - External: %s | Internal: %s\n\n", 
+		content += fmt.Sprintf("Current selection - External: %s | Internal: %s\n\n",
 			m.config.ExternalInterface, m.config.InternalInterface)
 	}
-	
+
 	content += m.list.View() + "\n\n"
-	
+
 	// Show interface recommendations
 	content += "💡 Recommendations:\n"
 	content += "   External: Use active interfaces with internet (en0, en1)\n"
 	content += "   Internal: Use bridge interfaces (bridge100, bridge101)\n\n"
-	
+
 	content += helpStyle.Render("'e' set external, 'i' set internal, 'r' refresh, 'esc' back")
 	return content
 }
 
 func (m Model) configView() string {
 	content := titleStyle.Render("NAT Configuration") + "\n\n"
-	
+
 	// Interface configuration
 	content += "🔌 Interfaces:\n"
 	content += fmt.Sprintf("   External: %s\n", getConfigValue(m.config.ExternalInterface, "Not set"))
 	content += fmt.Sprintf("   Internal: %s\n\n", getConfigValue(m.config.InternalInterface, "Not set"))
-	
+
 	// Network configuration
 	content += "🌐 Network Settings:\n"
 	content += fmt.Sprintf("1. Internal Network: %s.0/24\n", m.config.InternalNetwork)
@@ -117,54 +117,54 @@ func (m Model) configView() string {
 	content += fmt.Sprintf("3. DHCP End: %s\n", m.config.DHCPRange.End)
 	content += fmt.Sprintf("   DHCP Lease: %s\n", m.config.DHCPRange.Lease)
 	content += fmt.Sprintf("   DNS Servers: %s\n\n", strings.Join(m.config.DNSServers, ", "))
-	
+
 	// Status
 	if m.config.ExternalInterface != "" && m.config.InternalInterface != "" {
 		content += successStyle.Render("✅ Configuration ready") + "\n\n"
 	} else {
 		content += errorStyle.Render("❌ Missing interface configuration") + "\n\n"
 	}
-	
+
 	content += helpStyle.Render("Press number to edit, 'esc' to go back")
 	return content
 }
 
 func (m Model) monitorView() string {
 	content := titleStyle.Render("Connection Monitor") + "\n\n"
-	
+
 	// Show current configuration
 	content += fmt.Sprintf("🔗 %s (%s) → %s (%s.1/24)\n\n",
 		m.config.ExternalInterface,
 		getExternalIP(m.manager),
 		m.config.InternalInterface,
 		m.config.InternalNetwork)
-	
+
 	// Connection count
 	content += fmt.Sprintf("📊 Active connections: %d\n\n", len(m.connections))
-	
+
 	// Connections table
 	if len(m.connections) > 0 {
 		content += m.table.View() + "\n\n"
 	} else {
 		content += "No active connections\n\n"
 	}
-	
+
 	// Statistics
 	if status, err := m.manager.GetStatus(); err == nil {
 		content += fmt.Sprintf("📈 Uptime: %s\n", status.Uptime)
 		content += fmt.Sprintf("📱 Connected devices: %d\n\n", len(status.ConnectedDevices))
 	}
-	
+
 	content += helpStyle.Render("'r' refresh, 'esc' back")
 	return content
 }
 
 func (m Model) inputView() string {
 	content := titleStyle.Render("Edit Configuration") + "\n\n"
-	
+
 	fieldName := ""
 	fieldDescription := ""
-	
+
 	switch m.inputField {
 	case "network":
 		fieldName = "Internal Network"
@@ -176,7 +176,7 @@ func (m Model) inputView() string {
 		fieldName = "DHCP Range End"
 		fieldDescription = "Last IP address in DHCP range (e.g., 192.168.100.200)"
 	}
-	
+
 	content += fmt.Sprintf("Field: %s\n", fieldName)
 	content += fmt.Sprintf("Description: %s\n\n", fieldDescription)
 	content += m.textInput.View() + "\n\n"

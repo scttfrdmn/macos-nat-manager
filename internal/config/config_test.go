@@ -200,22 +200,22 @@ func TestSaveToAndLoad(t *testing.T) {
 
 	// Compare configs
 	if loadedConfig.ExternalInterface != originalConfig.ExternalInterface {
-		t.Errorf("ExternalInterface mismatch: got %s, want %s", 
+		t.Errorf("ExternalInterface mismatch: got %s, want %s",
 			loadedConfig.ExternalInterface, originalConfig.ExternalInterface)
 	}
 
 	if loadedConfig.InternalInterface != originalConfig.InternalInterface {
-		t.Errorf("InternalInterface mismatch: got %s, want %s", 
+		t.Errorf("InternalInterface mismatch: got %s, want %s",
 			loadedConfig.InternalInterface, originalConfig.InternalInterface)
 	}
 
 	if loadedConfig.InternalNetwork != originalConfig.InternalNetwork {
-		t.Errorf("InternalNetwork mismatch: got %s, want %s", 
+		t.Errorf("InternalNetwork mismatch: got %s, want %s",
 			loadedConfig.InternalNetwork, originalConfig.InternalNetwork)
 	}
 
 	if len(loadedConfig.DNSServers) != len(originalConfig.DNSServers) {
-		t.Errorf("DNSServers length mismatch: got %d, want %d", 
+		t.Errorf("DNSServers length mismatch: got %d, want %d",
 			len(loadedConfig.DNSServers), len(originalConfig.DNSServers))
 	}
 }

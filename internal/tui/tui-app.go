@@ -38,7 +38,7 @@ func NewApp(cfg *config.Config) *App {
 		DNSServers: cfg.DNSServers,
 		Active:     cfg.Active,
 	}
-	
+
 	return &App{
 		config:  cfg,
 		manager: nat.NewManager(natConfig),

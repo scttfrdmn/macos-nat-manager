@@ -16,15 +16,15 @@ var (
 	// Version is the application version, set at build time
 	Version = "dev"
 	// Commit is the git commit hash, set at build time
-	Commit  = "none"
+	Commit = "none"
 	// Date is the build date, set at build time
-	Date    = "unknown"
+	Date = "unknown"
 )
 
 var (
-	cfgFile     string
-	verbose     bool
-	configPath  string
+	cfgFile    string
+	verbose    bool
+	configPath string
 )
 
 // rootCmd represents the base command when called without any subcommands

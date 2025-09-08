@@ -216,12 +216,12 @@ func (m Model) handleInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.textInput.Blur()
 		m.textInput.SetValue("")
 		m.currentView = "config"
-		
+
 		// Save configuration
 		if err := m.config.Save(); err != nil {
 			m.err = fmt.Errorf("failed to save config: %w", err)
 		}
-		
+
 		return m, nil
 	case "esc":
 		m.textInput.Blur()
@@ -240,14 +240,14 @@ type interfaceItem struct {
 	iface nat.NetworkInterface
 }
 
-func (i interfaceItem) Title() string { 
-	return i.iface.Name 
+func (i interfaceItem) Title() string {
+	return i.iface.Name
 }
 
-func (i interfaceItem) Description() string { 
-	return fmt.Sprintf("%s - %s (%s)", i.iface.Type, i.iface.IP, i.iface.Status) 
+func (i interfaceItem) Description() string {
+	return fmt.Sprintf("%s - %s (%s)", i.iface.Type, i.iface.IP, i.iface.Status)
 }
 
-func (i interfaceItem) FilterValue() string { 
-	return i.iface.Name 
+func (i interfaceItem) FilterValue() string {
+	return i.iface.Name
 }

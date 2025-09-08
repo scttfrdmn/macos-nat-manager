@@ -55,7 +55,7 @@ Example:
 
 		// Print header
 		fmt.Printf("%-12s %-10s %-15s %-8s %s\n", "INTERFACE", "TYPE", "IP ADDRESS", "STATUS", "DESCRIPTION")
-		fmt.Printf("%-12s %-10s %-15s %-8s %s\n", 
+		fmt.Printf("%-12s %-10s %-15s %-8s %s\n",
 			strings.Repeat("-", 12),
 			strings.Repeat("-", 10),
 			strings.Repeat("-", 15),
@@ -78,11 +78,11 @@ Example:
 
 			description := getInterfaceDescription(iface)
 
-			fmt.Printf("%-12s %-10s %-15s %s%-7s %s\n", 
-				iface.Name, 
-				iface.Type, 
-				ip, 
-				statusIcon, 
+			fmt.Printf("%-12s %-10s %-15s %s%-7s %s\n",
+				iface.Name,
+				iface.Type,
+				ip,
+				statusIcon,
 				status,
 				description)
 		}

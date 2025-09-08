@@ -14,9 +14,9 @@ var (
 	externalInterface string
 	internalInterface string
 	internalNetwork   string
-	dhcpStart        string
-	dhcpEnd          string
-	dnsServers       []string
+	dhcpStart         string
+	dhcpEnd           string
+	dnsServers        []string
 )
 
 // startCmd represents the start command

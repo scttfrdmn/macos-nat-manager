@@ -172,7 +172,7 @@ func (m *Manager) StopNAT() error {
 // GetActiveConnections returns active network connections
 func (m *Manager) GetActiveConnections() ([]Connection, error) {
 	connections := make([]Connection, 0)
-	
+
 	cmd := exec.Command("netstat", "-n")
 	output, err := cmd.Output()
 	if err != nil {
@@ -255,19 +255,19 @@ type ConnectedDevice struct {
 	LeaseTime string
 }
 
-// Status represents NAT status information  
+// Status represents NAT status information
 type Status struct {
-	Active             bool
-	Running            bool // Alias for Active for backward compatibility
-	ExternalIP         string
-	Uptime             string
-	ConnectedDevices   []ConnectedDevice
-	ActiveConnections  []Connection
-	BytesIn            uint64
-	BytesOut           uint64
-	IPForwarding       bool
-	PFCTLEnabled       bool
-	DHCPRunning        bool
+	Active            bool
+	Running           bool // Alias for Active for backward compatibility
+	ExternalIP        string
+	Uptime            string
+	ConnectedDevices  []ConnectedDevice
+	ActiveConnections []Connection
+	BytesIn           uint64
+	BytesOut          uint64
+	IPForwarding      bool
+	PFCTLEnabled      bool
+	DHCPRunning       bool
 }
 
 // GetStatus returns current NAT status
@@ -276,26 +276,26 @@ func (m *Manager) GetStatus() (*Status, error) {
 	if connections == nil {
 		connections = []Connection{}
 	}
-	
+
 	isActive := m.IsActive()
 	status := &Status{
-		Active:             isActive,
-		Running:            isActive, // Alias for backward compatibility
-		ExternalIP:         "N/A", 
-		Uptime:             "N/A",
-		ConnectedDevices:   []ConnectedDevice{},
-		ActiveConnections:  connections,
-		BytesIn:            0,
-		BytesOut:           0,
-		IPForwarding:       isActive,
-		PFCTLEnabled:       isActive,
-		DHCPRunning:        isActive,
+		Active:            isActive,
+		Running:           isActive, // Alias for backward compatibility
+		ExternalIP:        "N/A",
+		Uptime:            "N/A",
+		ConnectedDevices:  []ConnectedDevice{},
+		ActiveConnections: connections,
+		BytesIn:           0,
+		BytesOut:          0,
+		IPForwarding:      isActive,
+		PFCTLEnabled:      isActive,
+		DHCPRunning:       isActive,
 	}
-	
+
 	if m.config == nil {
 		return status, nil
 	}
-	
+
 	// Try to get external IP
 	if m.config.ExternalInterface != "" {
 		cmd := exec.Command("ifconfig", m.config.ExternalInterface)
@@ -306,7 +306,7 @@ func (m *Manager) GetStatus() (*Status, error) {
 			}
 		}
 	}
-	
+
 	return status, nil
 }
 

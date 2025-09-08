@@ -97,7 +97,7 @@ func runSnapshotMode(manager *nat.Manager) error {
 	if showDevices && len(status.ConnectedDevices) > 0 {
 		fmt.Printf("📱 Connected Devices (%d):\n", len(status.ConnectedDevices))
 		fmt.Printf("%-15s %-18s %-15s %s\n", "IP ADDRESS", "MAC ADDRESS", "HOSTNAME", "LEASE TIME")
-		fmt.Printf("%s %s %s %s\n", 
+		fmt.Printf("%s %s %s %s\n",
 			fmt.Sprintf("%-15s", strings.Repeat("-", 15)),
 			fmt.Sprintf("%-18s", strings.Repeat("-", 18)),
 			fmt.Sprintf("%-15s", strings.Repeat("-", 15)),
@@ -108,7 +108,7 @@ func runSnapshotMode(manager *nat.Manager) error {
 			if hostname == "" {
 				hostname = "Unknown"
 			}
-			fmt.Printf("%-15s %-18s %-15s %s\n", 
+			fmt.Printf("%-15s %-18s %-15s %s\n",
 				device.IP, device.MAC, hostname, device.LeaseTime)
 		}
 		fmt.Println()
@@ -129,7 +129,7 @@ func runSnapshotMode(manager *nat.Manager) error {
 				fmt.Printf("... and %d more connections\n", len(status.ActiveConnections)-maxConnections)
 				break
 			}
-			fmt.Printf("%-8s %-25s %-25s %-12s\n", 
+			fmt.Printf("%-8s %-25s %-25s %-12s\n",
 				conn.Protocol, conn.Source, conn.Destination, conn.State)
 			count++
 		}
