@@ -40,64 +40,80 @@ func (m Model) Init() tea.Cmd {
 
 // Update handles messages and updates the model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
-		m.list.SetSize(msg.Width-4, msg.Height-10)
-		return m, nil
-
+		return m.handleWindowSize(msg)
 	case interfacesMsg:
-		m.interfaces = msg.interfaces
-		items := make([]list.Item, len(m.interfaces))
-		for i, iface := range m.interfaces {
-			items[i] = interfaceItem{iface}
-		}
-		m.list.SetItems(items)
-		return m, nil
-
+		return m.handleInterfaces(msg)
 	case connectionsMsg:
-		m.connections = msg.connections
-		rows := make([]table.Row, len(m.connections))
-		for i, conn := range m.connections {
-			rows[i] = table.Row{conn.Source, conn.Destination, conn.Protocol, conn.State}
-		}
-		m.table.SetRows(rows)
-		return m, nil
-
+		return m.handleConnections(msg)
 	case natResultMsg:
-		if msg.success {
-			m.err = nil
-		} else {
-			m.err = msg.err
-		}
-		return m, nil
-
+		return m.handleNATResult(msg)
 	case tickMsg:
-		if m.manager.IsActive() {
-			cmds = append(cmds, getConnections(m.manager), tick())
-		} else {
-			cmds = append(cmds, tick())
-		}
-
+		return m.handleTick()
 	case tea.KeyMsg:
-		switch m.currentView {
-		case "menu":
-			return m.handleMenuKeys(msg)
-		case "interfaces":
-			return m.handleInterfaceKeys(msg)
-		case "config":
-			return m.handleConfigKeys(msg)
-		case "monitor":
-			return m.handleMonitorKeys(msg)
-		case "input":
-			return m.handleInputKeys(msg)
-		}
+		return m.handleKeyMsg(msg)
 	}
+	return m, nil
+}
 
-	return m, tea.Batch(cmds...)
+func (m Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
+	m.width = msg.Width
+	m.height = msg.Height
+	m.list.SetSize(msg.Width-4, msg.Height-10)
+	return m, nil
+}
+
+func (m Model) handleInterfaces(msg interfacesMsg) (tea.Model, tea.Cmd) {
+	m.interfaces = msg.interfaces
+	items := make([]list.Item, len(m.interfaces))
+	for i, iface := range m.interfaces {
+		items[i] = interfaceItem{iface}
+	}
+	m.list.SetItems(items)
+	return m, nil
+}
+
+func (m Model) handleConnections(msg connectionsMsg) (tea.Model, tea.Cmd) {
+	m.connections = msg.connections
+	rows := make([]table.Row, len(m.connections))
+	for i, conn := range m.connections {
+		rows[i] = table.Row{conn.Source, conn.Destination, conn.Protocol, conn.State}
+	}
+	m.table.SetRows(rows)
+	return m, nil
+}
+
+func (m Model) handleNATResult(msg natResultMsg) (tea.Model, tea.Cmd) {
+	if msg.success {
+		m.err = nil
+	} else {
+		m.err = msg.err
+	}
+	return m, nil
+}
+
+func (m Model) handleTick() (tea.Model, tea.Cmd) {
+	if m.manager.IsActive() {
+		return m, tea.Batch(getConnections(m.manager), tick())
+	}
+	return m, tick()
+}
+
+func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch m.currentView {
+	case "menu":
+		return m.handleMenuKeys(msg)
+	case "interfaces":
+		return m.handleInterfaceKeys(msg)
+	case "config":
+		return m.handleConfigKeys(msg)
+	case "monitor":
+		return m.handleMonitorKeys(msg)
+	case "input":
+		return m.handleInputKeys(msg)
+	}
+	return m, nil
 }
 
 func (m Model) handleMenuKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
