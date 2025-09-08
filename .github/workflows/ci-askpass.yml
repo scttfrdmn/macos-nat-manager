@@ -1,0 +1,134 @@
+name: CI with ASKPASS Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Standard tests that don't require root privileges
+  test-unit:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Run unit tests
+      run: make test-unit
+      
+    - name: Run security tests
+      run: make test-security
+      
+    - name: Generate coverage report
+      run: make test-coverage
+      
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.out
+
+  # Integration tests using ASKPASS (requires secrets)
+  test-integration-askpass:
+    runs-on: macos-latest
+    # Only run on main branch or when explicitly triggered
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'test-integration')
+    needs: test-unit
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Set up ASKPASS environment
+      run: |
+        chmod +x scripts/askpass.sh scripts/setup-askpass.sh
+        export SUDO_ASKPASS="$(pwd)/scripts/askpass.sh"
+        echo "SUDO_ASKPASS=$(pwd)/scripts/askpass.sh" >> $GITHUB_ENV
+      
+    - name: Configure sudo password
+      env:
+        CI_SUDO_PASSWORD: ${{ secrets.MACOS_SUDO_PASSWORD }}
+      run: |
+        # Verify password is available
+        if [ -z "$CI_SUDO_PASSWORD" ]; then
+          echo "❌ CI_SUDO_PASSWORD secret not configured"
+          echo "   Add MACOS_SUDO_PASSWORD to repository secrets"
+          exit 1
+        fi
+        echo "✅ Sudo password configured for CI"
+        
+    - name: Test ASKPASS functionality
+      env:
+        CI_SUDO_PASSWORD: ${{ secrets.MACOS_SUDO_PASSWORD }}
+      run: make test-askpass
+      
+    - name: Run integration tests with ASKPASS
+      env:
+        CI_SUDO_PASSWORD: ${{ secrets.MACOS_SUDO_PASSWORD }}
+        NAT_ASKPASS_DEBUG: 1
+      run: make test-integration-askpass
+      timeout-minutes: 15
+      
+    - name: Cleanup after tests
+      if: always()
+      run: |
+        # Ensure cleanup runs even if tests fail
+        sudo -A pkill -f dnsmasq || true
+        sudo -A pfctl -d || true
+        sudo -A ifconfig bridge200 destroy 2>/dev/null || true
+        sudo -A sysctl -w net.inet.ip.forwarding=0 || true
+
+  # Security audit and dependency check
+  security-audit:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install security tools
+      run: |
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        go install github.com/sonatypecommunity/nancy@latest
+        
+    - name: Run gosec security scanner
+      run: gosec ./...
+      
+    - name: Run dependency vulnerability scan
+      run: |
+        go list -json -m all | nancy sleuth
+        
+    - name: Verify go modules
+      run: go mod verify
