@@ -4,6 +4,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![macOS](https://img.shields.io/badge/macOS-12+-green.svg)](https://www.apple.com/macos/)
 [![Release](https://img.shields.io/github/release/scttfrdmn/macos-nat-manager.svg)](https://github.com/scttfrdmn/macos-nat-manager/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/scttfrdmn/macos-nat-manager)](https://goreportcard.com/report/github.com/scttfrdmn/macos-nat-manager)
+[![Build Status](https://github.com/scttfrdmn/macos-nat-manager/workflows/CI/badge.svg)](https://github.com/scttfrdmn/macos-nat-manager/actions)
+[![CodeQL](https://github.com/scttfrdmn/macos-nat-manager/workflows/CodeQL/badge.svg)](https://github.com/scttfrdmn/macos-nat-manager/actions/workflows/codeql.yml)
+[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-A+-brightgreen.svg)](https://github.com/scttfrdmn/macos-nat-manager)
+[![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
 A comprehensive Network Address Translation (NAT) manager for macOS with both Terminal UI and CLI interfaces. Unlike macOS's built-in Internet Sharing which operates as a bridge, this tool creates **true NAT** with address translation, providing better privacy and network isolation.
 
@@ -347,12 +352,52 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 7. Push to the branch (`git push origin feature/amazing-feature`)
 8. Create a Pull Request
 
-### Code Standards
+### Code Quality Standards
 
-- Follow Go conventions and `gofmt`
-- Add tests for new features
+This project maintains **A+ grade** equivalent to [Go Report Card](https://goreportcard.com/) standards:
+
+#### Automated Quality Checks
+
+The repository includes a comprehensive **pre-commit hook** that enforces the same quality standards as Go Report Card:
+
+```bash
+# Hook runs these checks automatically on every commit:
+1. gofmt      - Code formatting (100% compliance)
+2. go vet     - Static analysis (no issues)
+3. golint     - Style guide compliance (warnings allowed)
+4. gocyclo    - Cyclomatic complexity (≤15 per function)
+5. misspell   - Spelling errors (zero tolerance)
+6. ineffassign- Ineffectual assignments (zero tolerance)
+```
+
+#### Quality Requirements
+
+- **Grade A or A+** - Only commits that achieve grade A (≥80%) or A+ (≥90%) are allowed
+- **Comprehensive Testing** - All tests must pass before commit
+- **Zero Static Issues** - `go vet` must report no problems
+- **Complexity Control** - Functions with complexity >15 must be refactored
+
+#### Manual Quality Checks
+
+```bash
+# Run quality checks manually
+make lint          # Run all linters
+make test          # Run test suite
+make vet          # Static analysis
+make fmt          # Format code
+
+# Check Go Report Card score locally
+.git/hooks/pre-commit  # Run the same checks as Git hook
+```
+
+#### Development Standards
+
+- Follow Go conventions and `gofmt` formatting
+- Maintain cyclomatic complexity ≤15 per function
+- Add comprehensive tests for new features
 - Update documentation as needed
-- Use meaningful commit messages
+- Use meaningful, conventional commit messages
+- Ensure 100% compatibility with Go Report Card standards
 
 ## 📋 Roadmap
 
