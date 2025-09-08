@@ -68,7 +68,7 @@ This Docker container is primarily intended for:
 
 💡 FOR ACTUAL NAT FUNCTIONALITY:
 Install natively on macOS using:
-  brew tap scttfrdmn/tap
+  brew tap scttfrdmn/macos-nat-manager
   brew install nat-manager
 
 EOF

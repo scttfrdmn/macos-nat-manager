@@ -36,7 +36,7 @@ A comprehensive Network Address Translation (NAT) manager for macOS with both Te
 
 ```bash
 # Add tap and install
-brew tap scttfrdmn/tap
+brew tap scttfrdmn/macos-nat-manager
 brew install nat-manager
 
 # Run with TUI interface

@@ -45,7 +45,7 @@ macos-nat-manager/
 
 ### 1. Homebrew (Recommended)
 ```bash
-brew tap scttfrdmn/tap
+brew tap scttfrdmn/macos-nat-manager
 brew install nat-manager
 ```
 
@@ -226,7 +226,7 @@ Ready for Claude Code with:
 ## 🚦 Getting Started Checklist
 
 ### For Users
-- [ ] Install via Homebrew: `brew install scttfrdmn/tap/nat-manager`
+- [ ] Install via Homebrew: `brew install scttfrdmn/macos-nat-manager/nat-manager`
 - [ ] Configure interfaces: `sudo nat-manager interfaces`
 - [ ] Start NAT: `sudo nat-manager start -e en0 -i bridge100`
 - [ ] Monitor: `sudo nat-manager monitor`

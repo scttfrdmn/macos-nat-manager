@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Architecture**: Native support for Intel and Apple Silicon
 
 #### Installation Methods  
-- **Homebrew**: `brew install scttfrdmn/tap/nat-manager`
+- **Homebrew**: `brew install scttfrdmn/macos-nat-manager/nat-manager`
 - **Source**: Build from source with Go 1.21+
 - **Binary**: Download from GitHub releases
 

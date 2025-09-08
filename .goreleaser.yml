@@ -94,7 +94,7 @@ release:
     
     #### Homebrew (Recommended)
     ```bash
-    brew tap scttfrdmn/tap
+    brew tap scttfrdmn/macos-nat-manager
     brew install nat-manager
     ```
     
@@ -131,7 +131,7 @@ brews:
   - name: nat-manager
     repository:
       owner: scttfrdmn
-      name: homebrew-tap
+      name: homebrew-macos-nat-manager
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
       name: goreleaserbot
@@ -142,6 +142,8 @@ brews:
     license: "MIT"
     dependencies:
       - name: dnsmasq
+        type: runtime
+      - name: scttfrdmn/macos-askpass/macos-askpass
         type: runtime
     test: |
       system "#{bin}/nat-manager --version"
@@ -170,6 +172,7 @@ brews:
       
       Dependencies:
       • dnsmasq: Installed automatically as dependency
+      • macos-askpass: Installed automatically as dependency (for testing)
       • pfctl: Built into macOS
       
       For help and documentation:

@@ -92,7 +92,7 @@ jobs:
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         
         # Clone the homebrew tap repository
-        git clone https://github.com/scttfrdmn/homebrew-tap.git /tmp/homebrew-tap
+        git clone https://github.com/scttfrdmn/homebrew-macos-nat-manager.git /tmp/homebrew-tap
         cp homebrew/nat-manager.rb /tmp/homebrew-tap/Formula/
         
         cd /tmp/homebrew-tap
@@ -121,7 +121,7 @@ jobs:
         
         ### Homebrew (Recommended)
         \`\`\`bash
-        brew tap scttfrdmn/tap
+        brew tap scttfrdmn/macos-nat-manager
         brew install nat-manager
         \`\`\`
         
