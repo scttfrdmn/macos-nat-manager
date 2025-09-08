@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewManager(t *testing.T) {
-	config := &NATConfig{
+	config := &Config{
 		ExternalInterface: "en0",
 		InternalInterface: "bridge100",
 		InternalNetwork:   "192.168.100",
@@ -72,7 +72,7 @@ func TestGetNetworkInterfaces(t *testing.T) {
 }
 
 func TestGetStatus(t *testing.T) {
-	config := &NATConfig{
+	config := &Config{
 		ExternalInterface: "en0",
 		InternalInterface: "bridge100",
 		InternalNetwork:   "192.168.100",

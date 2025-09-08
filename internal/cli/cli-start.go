@@ -71,7 +71,7 @@ Example:
 		}
 
 		// Convert config to NAT config
-		natConfig := &nat.NATConfig{
+		natConfig := &nat.Config{
 			ExternalInterface: cfg.ExternalInterface,
 			InternalInterface: cfg.InternalInterface,
 			InternalNetwork:   cfg.InternalNetwork,

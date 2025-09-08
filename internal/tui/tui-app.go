@@ -25,8 +25,8 @@ type App struct {
 
 // NewApp creates a new TUI application
 func NewApp(cfg *config.Config) *App {
-	// Convert config.Config to nat.NATConfig
-	natConfig := &nat.NATConfig{
+	// Convert config.Config to nat.Config
+	natConfig := &nat.Config{
 		ExternalInterface: cfg.ExternalInterface,
 		InternalInterface: cfg.InternalInterface,
 		InternalNetwork:   cfg.InternalNetwork,

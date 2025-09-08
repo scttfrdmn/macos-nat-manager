@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// NATConfig represents the configuration for NAT
-type NATConfig struct {
+// Config represents the configuration for NAT
+type Config struct {
 	ExternalInterface string
 	InternalInterface string
 	InternalNetwork   string
@@ -45,12 +45,12 @@ type Connection struct {
 
 // Manager manages NAT operations
 type Manager struct {
-	config  *NATConfig
+	config  *Config
 	dhcpPid int
 }
 
 // NewManager creates a new NAT manager
-func NewManager(config *NATConfig) *Manager {
+func NewManager(config *Config) *Manager {
 	return &Manager{
 		config: config,
 	}
@@ -207,7 +207,7 @@ func (m *Manager) IsActive() bool {
 }
 
 // GetConfig returns the current NAT configuration
-func (m *Manager) GetConfig() *NATConfig {
+func (m *Manager) GetConfig() *Config {
 	return m.config
 }
 
