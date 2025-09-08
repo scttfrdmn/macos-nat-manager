@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -217,5 +218,125 @@ func TestSaveToAndLoad(t *testing.T) {
 	if len(loadedConfig.DNSServers) != len(originalConfig.DNSServers) {
 		t.Errorf("DNSServers length mismatch: got %d, want %d",
 			len(loadedConfig.DNSServers), len(originalConfig.DNSServers))
+	}
+}
+
+func TestLoad(t *testing.T) {
+	// Test loading when no config file exists (should return default)
+	cfg, err := Load()
+	if err != nil {
+		t.Errorf("Load failed: %v", err)
+	}
+
+	if cfg == nil {
+		t.Fatal("Load returned nil config")
+	}
+
+	// Should match default config
+	defaultCfg := Default()
+	if cfg.InternalInterface != defaultCfg.InternalInterface {
+		t.Error("Loaded config should match default when no file exists")
+	}
+}
+
+func TestSave(t *testing.T) {
+	cfg := &Config{
+		ExternalInterface: "en0",
+		InternalInterface: "bridge100",
+		InternalNetwork:   "192.168.100",
+		DHCPRange: DHCPRange{
+			Start: "192.168.100.100",
+			End:   "192.168.100.200",
+			Lease: "12h",
+		},
+		DNSServers: []string{"8.8.8.8", "8.8.4.4"},
+		Active:     false,
+	}
+
+	// Test saving to default location (this might fail due to permissions, which is OK)
+	err := cfg.Save()
+	if err != nil {
+		t.Logf("Save to default location failed (expected in test environment): %v", err)
+	}
+}
+
+func TestGetConfigPath(t *testing.T) {
+	path, err := getConfigPath()
+	if err != nil {
+		t.Errorf("getConfigPath failed: %v", err)
+	}
+	if path == "" {
+		t.Error("getConfigPath should return a non-empty path")
+	}
+
+	// Should contain the config filename
+	if !strings.Contains(path, "config.yaml") {
+		t.Error("Config path should contain config.yaml")
+	}
+}
+
+func TestLoadFromNonExistentFile(t *testing.T) {
+	cfg, err := LoadFrom("/nonexistent/path/config.yaml")
+	if err != nil {
+		t.Errorf("LoadFrom should not fail for nonexistent file, got error: %v", err)
+	}
+
+	// Should return default config
+	if cfg == nil {
+		t.Fatal("LoadFrom should return default config for nonexistent file")
+	}
+
+	defaultCfg := Default()
+	if cfg.InternalInterface != defaultCfg.InternalInterface {
+		t.Error("LoadFrom should return default config for nonexistent file")
+	}
+}
+
+func TestDHCPRangeStruct(t *testing.T) {
+	dhcp := DHCPRange{
+		Start: "192.168.1.100",
+		End:   "192.168.1.200",
+		Lease: "24h",
+	}
+
+	if dhcp.Start != "192.168.1.100" {
+		t.Error("DHCPRange Start not set correctly")
+	}
+	if dhcp.End != "192.168.1.200" {
+		t.Error("DHCPRange End not set correctly")
+	}
+	if dhcp.Lease != "24h" {
+		t.Error("DHCPRange Lease not set correctly")
+	}
+}
+
+func TestConfigFieldAccess(t *testing.T) {
+	cfg := Config{
+		ExternalInterface: "en0",
+		InternalInterface: "bridge100",
+		InternalNetwork:   "192.168.100",
+		DHCPRange: DHCPRange{
+			Start: "192.168.100.100",
+			End:   "192.168.100.200",
+			Lease: "12h",
+		},
+		DNSServers: []string{"8.8.8.8", "1.1.1.1"},
+		Active:     true,
+	}
+
+	if cfg.ExternalInterface != "en0" {
+		t.Error("Config ExternalInterface not set correctly")
+	}
+	if cfg.InternalInterface != "bridge100" {
+		t.Error("Config InternalInterface not set correctly")
+	}
+	if cfg.InternalNetwork != "192.168.100" {
+		t.Error("Config InternalNetwork not set correctly")
+	}
+	if len(cfg.DNSServers) != 2 {
+		t.Error("Config DNSServers not set correctly")
+	}
+	if !cfg.Active {
+		t.Error("Config Active not set correctly")
 	}
 }

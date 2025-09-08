@@ -1,0 +1,2211 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>nat-manager: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/scttfrdmn/macos-nat-manager/cmd/nat-manager/main.go (0.0%)</option>
+				
+				<option value="file1">github.com/scttfrdmn/macos-nat-manager/internal/cli/cli-interfaces.go (0.0%)</option>
+				
+				<option value="file2">github.com/scttfrdmn/macos-nat-manager/internal/cli/cli-monitor.go (0.0%)</option>
+				
+				<option value="file3">github.com/scttfrdmn/macos-nat-manager/internal/cli/cli-root.go (0.0%)</option>
+				
+				<option value="file4">github.com/scttfrdmn/macos-nat-manager/internal/cli/cli-start.go (0.0%)</option>
+				
+				<option value="file5">github.com/scttfrdmn/macos-nat-manager/internal/cli/cli-status.go (0.0%)</option>
+				
+				<option value="file6">github.com/scttfrdmn/macos-nat-manager/internal/cli/cli-stop.go (0.0%)</option>
+				
+				<option value="file7">github.com/scttfrdmn/macos-nat-manager/internal/config/config-package.go (52.6%)</option>
+				
+				<option value="file8">github.com/scttfrdmn/macos-nat-manager/internal/nat/manager.go (50.0%)</option>
+				
+				<option value="file9">github.com/scttfrdmn/macos-nat-manager/internal/tui/tui-app.go (0.0%)</option>
+				
+				<option value="file10">github.com/scttfrdmn/macos-nat-manager/internal/tui/tui-models.go (0.0%)</option>
+				
+				<option value="file11">github.com/scttfrdmn/macos-nat-manager/internal/tui/tui-views.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Package main is the entry point for the macOS NAT Manager application
+package main
+
+import (
+        "fmt"
+        "os"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/cli"
+)
+
+// Version information (set by build flags)
+var (
+        version = "dev"
+        commit  = "none"
+        date    = "unknown"
+)
+
+func main() <span class="cov0" title="0">{
+        // Set version info for CLI
+        cli.Version = version
+        cli.Commit = commit
+        cli.Date = date
+
+        if err := cli.Execute(); err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+                os.Exit(1)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package cli provides command line interface commands for the NAT manager
+package cli
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/spf13/cobra"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+var (
+        showAll    bool
+        filterType string
+)
+
+// interfacesCmd represents the interfaces command
+var interfacesCmd = &amp;cobra.Command{
+        Use:     "interfaces",
+        Aliases: []string{"iface", "if"},
+        Short:   "List available network interfaces",
+        Long: `List all available network interfaces on the system.
+
+This shows interfaces that can be used for NAT configuration,
+including their current status, IP addresses, and types.
+
+Example:
+  nat-manager interfaces
+  nat-manager interfaces --all          # Show all interfaces including loopback
+  nat-manager interfaces --type bridge  # Filter by interface type`,
+        RunE: func(_ *cobra.Command, _ []string) error <span class="cov0" title="0">{
+                // Create a temporary manager to get interfaces
+                manager := nat.NewManager(nil)
+                interfaces, err := manager.GetNetworkInterfaces()
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to list interfaces: %w", err)
+                }</span>
+
+                // Filter by type if specified
+                <span class="cov0" title="0">if filterType != "" </span><span class="cov0" title="0">{
+                        filtered := make([]nat.NetworkInterface, 0)
+                        for _, iface := range interfaces </span><span class="cov0" title="0">{
+                                if strings.EqualFold(iface.Type, filterType) </span><span class="cov0" title="0">{
+                                        filtered = append(filtered, iface)
+                                }</span>
+                        }
+                        <span class="cov0" title="0">interfaces = filtered</span>
+                }
+
+                <span class="cov0" title="0">if len(interfaces) == 0 </span><span class="cov0" title="0">{
+                        fmt.Printf("No interfaces found\n")
+                        return nil
+                }</span>
+
+                // Print header
+                <span class="cov0" title="0">fmt.Printf("%-12s %-10s %-15s %-8s %s\n", "INTERFACE", "TYPE", "IP ADDRESS", "STATUS", "DESCRIPTION")
+                fmt.Printf("%-12s %-10s %-15s %-8s %s\n",
+                        strings.Repeat("-", 12),
+                        strings.Repeat("-", 10),
+                        strings.Repeat("-", 15),
+                        strings.Repeat("-", 8),
+                        strings.Repeat("-", 20))
+
+                // Print interfaces
+                for _, iface := range interfaces </span><span class="cov0" title="0">{
+                        status := "Down"
+                        statusIcon := "❌"
+                        if iface.Status == "Up" </span><span class="cov0" title="0">{
+                                status = "Up"
+                                statusIcon = "✅"
+                        }</span>
+
+                        <span class="cov0" title="0">ip := iface.IP
+                        if ip == "" </span><span class="cov0" title="0">{
+                                ip = "N/A"
+                        }</span>
+
+                        <span class="cov0" title="0">description := getInterfaceDescription(iface)
+
+                        fmt.Printf("%-12s %-10s %-15s %s%-7s %s\n",
+                                iface.Name,
+                                iface.Type,
+                                ip,
+                                statusIcon,
+                                status,
+                                description)</span>
+                }
+
+                <span class="cov0" title="0">fmt.Printf("\nSuitable for:\n")
+                fmt.Printf("  External: Interfaces with internet connectivity (en0, en1, etc.)\n")
+                fmt.Printf("  Internal: Bridge interfaces for NAT (bridge100, bridge101, etc.)\n")
+                fmt.Printf("\nNote: Bridge interfaces will be created automatically if they don't exist\n")
+
+                return nil</span>
+        },
+}
+
+func getInterfaceDescription(iface nat.NetworkInterface) string <span class="cov0" title="0">{
+        switch </span>{
+        case strings.HasPrefix(iface.Name, "en"):<span class="cov0" title="0">
+                if strings.Contains(iface.Name, "0") </span><span class="cov0" title="0">{
+                        return "Ethernet (Primary)"
+                }</span>
+                <span class="cov0" title="0">return "Ethernet/WiFi"</span>
+        case strings.HasPrefix(iface.Name, "bridge"):<span class="cov0" title="0">
+                return "Virtual Bridge"</span>
+        case strings.HasPrefix(iface.Name, "utun"):<span class="cov0" title="0">
+                return "VPN Tunnel"</span>
+        case strings.HasPrefix(iface.Name, "awdl"):<span class="cov0" title="0">
+                return "AirDrop/AirPlay"</span>
+        case strings.HasPrefix(iface.Name, "lo"):<span class="cov0" title="0">
+                return "Loopback"</span>
+        case strings.HasPrefix(iface.Name, "gif"):<span class="cov0" title="0">
+                return "Generic Tunnel"</span>
+        case strings.HasPrefix(iface.Name, "stf"):<span class="cov0" title="0">
+                return "6to4 Tunnel"</span>
+        default:<span class="cov0" title="0">
+                return "Network Interface"</span>
+        }
+}
+
+func init() <span class="cov0" title="0">{
+        rootCmd.AddCommand(interfacesCmd)
+
+        interfacesCmd.Flags().BoolVarP(&amp;showAll, "all", "a", false, "show all interfaces including loopback and inactive")
+        interfacesCmd.Flags().StringVarP(&amp;filterType, "type", "t", "", "filter by interface type (ethernet, bridge, vpn, etc.)")
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package cli
+
+import (
+        "context"
+        "fmt"
+        "os"
+        "os/signal"
+        "strings"
+        "syscall"
+        "time"
+
+        "github.com/spf13/cobra"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/config"
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+var (
+        refreshInterval time.Duration
+        maxConnections  int
+        showDevices     bool
+        followMode      bool
+)
+
+// monitorCmd represents the monitor command
+var monitorCmd = &amp;cobra.Command{
+        Use:   "monitor",
+        Short: "Monitor NAT traffic and connections",
+        Long: `Monitor active NAT traffic, connections, and connected devices in real-time.
+
+This displays:
+- Active network connections through NAT
+- Connected devices and their DHCP leases
+- Real-time traffic statistics
+- Connection state changes
+
+Example:
+  nat-manager monitor
+  nat-manager monitor --interval 5s --max 50  # Custom refresh and limit
+  nat-manager monitor --devices               # Show connected devices
+  nat-manager monitor --follow                # Continuous monitoring mode`,
+        RunE: func(_ *cobra.Command, args []string) error <span class="cov0" title="0">{
+                // Load config
+                cfg, err := config.Load()
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to load config: %w", err)
+                }</span>
+
+                // Convert config to NAT config
+                <span class="cov0" title="0">natConfig := &amp;nat.Config{
+                        ExternalInterface: cfg.ExternalInterface,
+                        InternalInterface: cfg.InternalInterface,
+                        InternalNetwork:   cfg.InternalNetwork,
+                        DHCPRange: nat.DHCPRange{
+                                Start: cfg.DHCPRange.Start,
+                                End:   cfg.DHCPRange.End,
+                                Lease: cfg.DHCPRange.Lease,
+                        },
+                        DNSServers: cfg.DNSServers,
+                        Active:     cfg.Active,
+                }
+
+                // Create NAT manager
+                manager := nat.NewManager(natConfig)
+
+                // Check if NAT is running
+                if !manager.IsActive() </span><span class="cov0" title="0">{
+                        return fmt.Errorf("NAT is not running. Start it first with 'nat-manager start'")
+                }</span>
+
+                <span class="cov0" title="0">if followMode </span><span class="cov0" title="0">{
+                        return runFollowMode(manager)
+                }</span>
+
+                <span class="cov0" title="0">return runSnapshotMode(manager)</span>
+        },
+}
+
+func runSnapshotMode(manager *nat.Manager) error <span class="cov0" title="0">{
+        status, err := manager.GetStatus()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to get status: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">config := manager.GetConfig()
+        if config == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("no NAT configuration found")
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("📊 NAT Monitor - %s\n", time.Now().Format("2006-01-02 15:04:05"))
+        fmt.Printf("External: %s (%s) → Internal: %s (%s.1/24)\n\n",
+                config.ExternalInterface,
+                status.ExternalIP,
+                config.InternalInterface,
+                config.InternalNetwork)
+
+        if showDevices &amp;&amp; len(status.ConnectedDevices) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Printf("📱 Connected Devices (%d):\n", len(status.ConnectedDevices))
+                fmt.Printf("%-15s %-18s %-15s %s\n", "IP ADDRESS", "MAC ADDRESS", "HOSTNAME", "LEASE TIME")
+                fmt.Printf("%s %s %s %s\n",
+                        fmt.Sprintf("%-15s", strings.Repeat("-", 15)),
+                        fmt.Sprintf("%-18s", strings.Repeat("-", 18)),
+                        fmt.Sprintf("%-15s", strings.Repeat("-", 15)),
+                        strings.Repeat("-", 15))
+
+                for _, device := range status.ConnectedDevices </span><span class="cov0" title="0">{
+                        hostname := device.Hostname
+                        if hostname == "" </span><span class="cov0" title="0">{
+                                hostname = "Unknown"
+                        }</span>
+                        <span class="cov0" title="0">fmt.Printf("%-15s %-18s %-15s %s\n",
+                                device.IP, device.MAC, hostname, device.LeaseTime)</span>
+                }
+                <span class="cov0" title="0">fmt.Println()</span>
+        }
+
+        <span class="cov0" title="0">if len(status.ActiveConnections) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Printf("🌐 Active Connections (%d):\n", len(status.ActiveConnections))
+                fmt.Printf("%-8s %-25s %-25s %-12s\n", "PROTO", "SOURCE", "DESTINATION", "STATE")
+                fmt.Printf("%-8s %-25s %-25s %-12s\n",
+                        strings.Repeat("-", 8),
+                        strings.Repeat("-", 25),
+                        strings.Repeat("-", 25),
+                        strings.Repeat("-", 12))
+
+                count := 0
+                for _, conn := range status.ActiveConnections </span><span class="cov0" title="0">{
+                        if count &gt;= maxConnections </span><span class="cov0" title="0">{
+                                fmt.Printf("... and %d more connections\n", len(status.ActiveConnections)-maxConnections)
+                                break</span>
+                        }
+                        <span class="cov0" title="0">fmt.Printf("%-8s %-25s %-25s %-12s\n",
+                                conn.Protocol, conn.Source, conn.Destination, conn.State)
+                        count++</span>
+                }
+        } else<span class="cov0" title="0"> {
+                fmt.Printf("🌐 No active connections\n")
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("\n📈 Statistics:\n")
+        fmt.Printf("Uptime: %s | Traffic: %s in, %s out\n",
+                status.Uptime,
+                formatBytes(status.BytesIn),
+                formatBytes(status.BytesOut))
+
+        return nil</span>
+}
+
+func runFollowMode(manager *nat.Manager) error <span class="cov0" title="0">{
+        // Set up signal handling for graceful shutdown
+        ctx, cancel := context.WithCancel(context.Background())
+        defer cancel()
+
+        c := make(chan os.Signal, 1)
+        signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+        go func() </span><span class="cov0" title="0">{
+                &lt;-c
+                fmt.Printf("\n\n👋 Monitoring stopped\n")
+                cancel()
+        }</span>()
+
+        <span class="cov0" title="0">fmt.Printf("🔄 NAT Monitor (Follow Mode) - Press Ctrl+C to stop\n")
+        fmt.Printf("Refresh interval: %s | Max connections: %d\n\n", refreshInterval, maxConnections)
+
+        ticker := time.NewTicker(refreshInterval)
+        defer ticker.Stop()
+
+        // Initial display
+        if err := displayMonitorData(manager); err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">for </span><span class="cov0" title="0">{
+                select </span>{
+                case &lt;-ctx.Done():<span class="cov0" title="0">
+                        return nil</span>
+                case &lt;-ticker.C:<span class="cov0" title="0">
+                        // Clear screen and redisplay
+                        fmt.Print("\033[2J\033[H") // ANSI clear screen and move cursor to top
+                        if err := displayMonitorData(manager); err != nil </span><span class="cov0" title="0">{
+                                fmt.Printf("Error updating display: %v\n", err)
+                        }</span>
+                }
+        }
+}
+
+func displayMonitorData(manager *nat.Manager) error <span class="cov0" title="0">{
+        status, err := manager.GetStatus()
+        if err != nil </span><span class="cov0" title="0">{
+                return err
+        }</span>
+
+        <span class="cov0" title="0">config := manager.GetConfig()
+        if config == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("no NAT configuration found")
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("📊 NAT Monitor - %s (Uptime: %s)\n",
+                time.Now().Format("15:04:05"),
+                status.Uptime)
+        fmt.Printf("External: %s (%s) → Internal: %s (%s.1/24)\n",
+                config.ExternalInterface,
+                status.ExternalIP,
+                config.InternalInterface,
+                config.InternalNetwork)
+        fmt.Printf("Traffic: %s in, %s out | Devices: %d | Connections: %d\n\n",
+                formatBytes(status.BytesIn),
+                formatBytes(status.BytesOut),
+                len(status.ConnectedDevices),
+                len(status.ActiveConnections))
+
+        if showDevices &amp;&amp; len(status.ConnectedDevices) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Printf("📱 Connected Devices:\n")
+                for _, device := range status.ConnectedDevices </span><span class="cov0" title="0">{
+                        hostname := device.Hostname
+                        if hostname == "" </span><span class="cov0" title="0">{
+                                hostname = "Unknown"
+                        }</span>
+                        <span class="cov0" title="0">fmt.Printf("  %s - %s (%s)\n", device.IP, hostname, device.MAC[:8]+"...")</span>
+                }
+                <span class="cov0" title="0">fmt.Println()</span>
+        }
+
+        <span class="cov0" title="0">if len(status.ActiveConnections) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Printf("🌐 Recent Connections:\n")
+                count := 0
+                for _, conn := range status.ActiveConnections </span><span class="cov0" title="0">{
+                        if count &gt;= maxConnections </span><span class="cov0" title="0">{
+                                break</span>
+                        }
+                        <span class="cov0" title="0">fmt.Printf("  %s %s → %s (%s)\n",
+                                conn.Protocol, conn.Source, conn.Destination, conn.State)
+                        count++</span>
+                }
+                <span class="cov0" title="0">if len(status.ActiveConnections) &gt; maxConnections </span><span class="cov0" title="0">{
+                        fmt.Printf("  ... and %d more\n", len(status.ActiveConnections)-maxConnections)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return nil</span>
+}
+
+func init() <span class="cov0" title="0">{
+        rootCmd.AddCommand(monitorCmd)
+
+        monitorCmd.Flags().DurationVarP(&amp;refreshInterval, "interval", "i", 2*time.Second, "refresh interval for follow mode")
+        monitorCmd.Flags().IntVarP(&amp;maxConnections, "max", "m", 20, "maximum connections to display")
+        monitorCmd.Flags().BoolVarP(&amp;showDevices, "devices", "d", false, "show connected devices")
+        monitorCmd.Flags().BoolVarP(&amp;followMode, "follow", "f", false, "continuous monitoring mode")
+}</span>
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package cli
+
+import (
+        "fmt"
+        "os"
+        "runtime"
+
+        "github.com/spf13/cobra"
+        "github.com/spf13/viper"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/config"
+        "github.com/scttfrdmn/macos-nat-manager/internal/tui"
+)
+
+var (
+        // Version is the application version, set at build time
+        Version = "dev"
+        // Commit is the git commit hash, set at build time
+        Commit = "none"
+        // Date is the build date, set at build time
+        Date = "unknown"
+)
+
+var (
+        cfgFile    string
+        verbose    bool
+        configPath string
+)
+
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &amp;cobra.Command{
+        Use:   "nat-manager",
+        Short: "macOS NAT Manager - True NAT with address translation",
+        Long: `macOS NAT Manager provides true Network Address Translation (NAT) 
+functionality for macOS, unlike the built-in Internet Sharing which operates 
+as a bridge. This tool creates proper address translation, hiding internal 
+devices from the upstream network.
+
+Features:
+- True NAT implementation using pfctl
+- Internal DHCP server with dnsmasq  
+- Interactive TUI and CLI interfaces
+- Real-time connection monitoring
+- Clean setup and teardown
+- Network isolation and privacy`,
+        Version: fmt.Sprintf("%s (%s) built on %s", Version, Commit, Date),
+        Run: func(cmd *cobra.Command, args []string) <span class="cov0" title="0">{
+                // If no subcommand is provided, launch TUI
+                if len(args) == 0 </span><span class="cov0" title="0">{
+                        launchTUI()
+                }</span> else<span class="cov0" title="0"> {
+                        _ = cmd.Help()
+                }</span>
+        },
+}
+
+// Execute adds all child commands to the root command and sets flags appropriately.
+func Execute() error <span class="cov0" title="0">{
+        return rootCmd.Execute()
+}</span>
+
+func init() <span class="cov0" title="0">{
+        cobra.OnInitialize(initConfig)
+
+        // Global flags
+        rootCmd.PersistentFlags().StringVar(&amp;cfgFile, "config", "", "config file (default is $HOME/.nat-manager.yaml)")
+        rootCmd.PersistentFlags().BoolVarP(&amp;verbose, "verbose", "v", false, "verbose output")
+        rootCmd.PersistentFlags().StringVar(&amp;configPath, "config-path", "", "path to store configuration")
+
+        // Bind flags to viper
+        _ = viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
+        _ = viper.BindPFlag("config-path", rootCmd.PersistentFlags().Lookup("config-path"))
+}</span>
+
+// initConfig reads in config file and ENV variables.
+func initConfig() <span class="cov0" title="0">{
+        if cfgFile != "" </span><span class="cov0" title="0">{
+                // Use config file from the flag.
+                viper.SetConfigFile(cfgFile)
+        }</span> else<span class="cov0" title="0"> {
+                // Find home directory.
+                home, err := os.UserHomeDir()
+                cobra.CheckErr(err)
+
+                // Search config in home directory with name ".nat-manager" (without extension).
+                viper.AddConfigPath(home)
+                viper.SetConfigType("yaml")
+                viper.SetConfigName(".nat-manager")
+        }</span>
+
+        <span class="cov0" title="0">viper.AutomaticEnv() // read in environment variables that match
+
+        // If a config file is found, read it in.
+        if err := viper.ReadInConfig(); err == nil &amp;&amp; verbose </span><span class="cov0" title="0">{
+                fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+        }</span>
+
+        // Validate we're on macOS
+        <span class="cov0" title="0">if runtime.GOOS != "darwin" </span><span class="cov0" title="0">{
+                fmt.Fprintf(os.Stderr, "Error: This tool only works on macOS, detected: %s\n", runtime.GOOS)
+                os.Exit(1)
+        }</span>
+
+        // Check for root privileges
+        <span class="cov0" title="0">if os.Geteuid() != 0 </span><span class="cov0" title="0">{
+                fmt.Fprintln(os.Stderr, "Error: This tool requires root privileges. Please run with sudo.")
+                os.Exit(1)
+        }</span>
+}
+
+func launchTUI() <span class="cov0" title="0">{
+        cfg, err := config.Load()
+        if err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
+                os.Exit(1)
+        }</span>
+
+        <span class="cov0" title="0">app := tui.NewApp(cfg)
+        if err := app.Run(); err != nil </span><span class="cov0" title="0">{
+                fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
+                os.Exit(1)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package cli
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/spf13/cobra"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/config"
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+var (
+        externalInterface string
+        internalInterface string
+        internalNetwork   string
+        dhcpStart         string
+        dhcpEnd           string
+        dnsServers        []string
+)
+
+// startCmd represents the start command
+var startCmd = &amp;cobra.Command{
+        Use:   "start",
+        Short: "Start NAT service",
+        Long: `Start the NAT service with the specified configuration.
+        
+This will:
+- Enable IP forwarding
+- Create/configure internal interface  
+- Set up pfctl NAT rules
+- Start DHCP server
+- Begin routing traffic between interfaces
+
+Example:
+  nat-manager start --external en0 --internal bridge100 --network 192.168.100
+  nat-manager start -e en1 -i bridge101 -n 10.0.1 --dhcp-start 10.0.1.100 --dhcp-end 10.0.1.200`,
+        RunE: func(_ *cobra.Command, _ []string) error <span class="cov0" title="0">{
+                // Load existing config
+                cfg, err := config.Load()
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to load config: %w", err)
+                }</span>
+
+                // Override with command line flags
+                <span class="cov0" title="0">if externalInterface != "" </span><span class="cov0" title="0">{
+                        cfg.ExternalInterface = externalInterface
+                }</span>
+                <span class="cov0" title="0">if internalInterface != "" </span><span class="cov0" title="0">{
+                        cfg.InternalInterface = internalInterface
+                }</span>
+                <span class="cov0" title="0">if internalNetwork != "" </span><span class="cov0" title="0">{
+                        cfg.InternalNetwork = internalNetwork
+                }</span>
+                <span class="cov0" title="0">if dhcpStart != "" </span><span class="cov0" title="0">{
+                        cfg.DHCPRange.Start = dhcpStart
+                }</span>
+                <span class="cov0" title="0">if dhcpEnd != "" </span><span class="cov0" title="0">{
+                        cfg.DHCPRange.End = dhcpEnd
+                }</span>
+                <span class="cov0" title="0">if len(dnsServers) &gt; 0 </span><span class="cov0" title="0">{
+                        cfg.DNSServers = dnsServers
+                }</span>
+
+                // Validate required fields
+                <span class="cov0" title="0">if cfg.ExternalInterface == "" </span><span class="cov0" title="0">{
+                        return fmt.Errorf("external interface is required (use --external or -e)")
+                }</span>
+                <span class="cov0" title="0">if cfg.InternalInterface == "" </span><span class="cov0" title="0">{
+                        return fmt.Errorf("internal interface is required (use --internal or -i)")
+                }</span>
+
+                // Convert config to NAT config
+                <span class="cov0" title="0">natConfig := &amp;nat.Config{
+                        ExternalInterface: cfg.ExternalInterface,
+                        InternalInterface: cfg.InternalInterface,
+                        InternalNetwork:   cfg.InternalNetwork,
+                        DHCPRange: nat.DHCPRange{
+                                Start: cfg.DHCPRange.Start,
+                                End:   cfg.DHCPRange.End,
+                                Lease: cfg.DHCPRange.Lease,
+                        },
+                        DNSServers: cfg.DNSServers,
+                        Active:     cfg.Active,
+                }
+
+                // Create NAT manager
+                manager := nat.NewManager(natConfig)
+
+                // Check if already running
+                if manager.IsActive() </span><span class="cov0" title="0">{
+                        return fmt.Errorf("NAT is already running")
+                }</span>
+
+                // Start NAT
+                <span class="cov0" title="0">if err := manager.StartNAT(); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to start NAT: %w", err)
+                }</span>
+
+                // Save config for future use
+                <span class="cov0" title="0">if err := cfg.Save(); err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("Warning: failed to save config: %v\n", err)
+                }</span>
+
+                <span class="cov0" title="0">fmt.Printf("✅ NAT started successfully\n")
+                fmt.Printf("   External: %s\n", cfg.ExternalInterface)
+                fmt.Printf("   Internal: %s (%s.1/24)\n", cfg.InternalInterface, cfg.InternalNetwork)
+                fmt.Printf("   DHCP Range: %s - %s\n", cfg.DHCPRange.Start, cfg.DHCPRange.End)
+                fmt.Printf("   DNS Servers: %s\n", strings.Join(cfg.DNSServers, ", "))
+
+                return nil</span>
+        },
+}
+
+func init() <span class="cov0" title="0">{
+        rootCmd.AddCommand(startCmd)
+
+        // Interface flags
+        startCmd.Flags().StringVarP(&amp;externalInterface, "external", "e", "", "external network interface (e.g., en0, en1)")
+        startCmd.Flags().StringVarP(&amp;internalInterface, "internal", "i", "", "internal network interface (e.g., bridge100)")
+
+        // Network configuration flags
+        startCmd.Flags().StringVarP(&amp;internalNetwork, "network", "n", "", "internal network (e.g., 192.168.100)")
+        startCmd.Flags().StringVar(&amp;dhcpStart, "dhcp-start", "", "DHCP range start (e.g., 192.168.100.100)")
+        startCmd.Flags().StringVar(&amp;dhcpEnd, "dhcp-end", "", "DHCP range end (e.g., 192.168.100.200)")
+        startCmd.Flags().StringSliceVar(&amp;dnsServers, "dns", []string{}, "DNS servers (comma-separated)")
+
+        // Mark required flags with helpful messages
+        _ = startCmd.MarkFlagRequired("external")
+        _ = startCmd.MarkFlagRequired("internal")
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package cli
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/spf13/cobra"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/config"
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+var jsonOutput bool
+
+// statusCmd represents the status command
+var statusCmd = &amp;cobra.Command{
+        Use:   "status",
+        Short: "Show NAT service status",
+        Long: `Display the current status of the NAT service including:
+- Running state
+- Interface configuration  
+- Network settings
+- Active connections
+- System resource usage
+
+Example:
+  nat-manager status
+  nat-manager status --json  # JSON output for scripting`,
+        RunE: func(_ *cobra.Command, args []string) error <span class="cov0" title="0">{
+                // Load config
+                cfg, err := config.Load()
+                if err != nil </span><span class="cov0" title="0">{
+                        fmt.Printf("⚠️  No configuration found\n")
+                        cfg = config.Default()
+                }</span>
+
+                // Convert config to NAT config
+                <span class="cov0" title="0">natConfig := &amp;nat.Config{
+                        ExternalInterface: cfg.ExternalInterface,
+                        InternalInterface: cfg.InternalInterface,
+                        InternalNetwork:   cfg.InternalNetwork,
+                        DHCPRange: nat.DHCPRange{
+                                Start: cfg.DHCPRange.Start,
+                                End:   cfg.DHCPRange.End,
+                                Lease: cfg.DHCPRange.Lease,
+                        },
+                        DNSServers: cfg.DNSServers,
+                        Active:     cfg.Active,
+                }
+
+                // Create NAT manager
+                manager := nat.NewManager(natConfig)
+
+                // Get status
+                status, err := manager.GetStatus()
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to get NAT status: %w", err)
+                }</span>
+
+                <span class="cov0" title="0">if jsonOutput </span><span class="cov0" title="0">{
+                        return printStatusJSON(manager, status)
+                }</span>
+
+                <span class="cov0" title="0">return printStatusHuman(manager, status)</span>
+        },
+}
+
+func printStatusHuman(manager *nat.Manager, status *nat.Status) error <span class="cov0" title="0">{
+        // Overall status
+        if status.Running </span><span class="cov0" title="0">{
+                fmt.Printf("🟢 NAT Status: %s\n", "ACTIVE")
+        }</span> else<span class="cov0" title="0"> {
+                fmt.Printf("🔴 NAT Status: %s\n", "INACTIVE")
+                return nil
+        }</span>
+
+        <span class="cov0" title="0">config := manager.GetConfig()
+        if config == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("no NAT configuration found")
+        }</span>
+
+        <span class="cov0" title="0">fmt.Printf("\n📡 Configuration:\n")
+        fmt.Printf("   External Interface: %s (%s)\n", config.ExternalInterface, status.ExternalIP)
+        fmt.Printf("   Internal Interface: %s (%s.1/24)\n", config.InternalInterface, config.InternalNetwork)
+        fmt.Printf("   DHCP Range: %s - %s\n", config.DHCPRange.Start, config.DHCPRange.End)
+        fmt.Printf("   DNS Servers: %s\n", strings.Join(config.DNSServers, ", "))
+
+        fmt.Printf("\n🔧 System Status:\n")
+        fmt.Printf("   IP Forwarding: %s\n", formatBool(status.IPForwarding))
+        fmt.Printf("   pfctl NAT Rules: %s\n", formatBool(status.PFCTLEnabled))
+        fmt.Printf("   DHCP Server: %s\n", formatBool(status.DHCPRunning))
+
+        if len(status.ConnectedDevices) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Printf("\n📱 Connected Devices (%d):\n", len(status.ConnectedDevices))
+                for _, device := range status.ConnectedDevices </span><span class="cov0" title="0">{
+                        fmt.Printf("   %s - %s (%s)\n", device.IP, device.MAC, device.Hostname)
+                }</span>
+        }
+
+        <span class="cov0" title="0">if len(status.ActiveConnections) &gt; 0 </span><span class="cov0" title="0">{
+                fmt.Printf("\n🌐 Active Connections (%d):\n", len(status.ActiveConnections))
+                for i, conn := range status.ActiveConnections </span><span class="cov0" title="0">{
+                        if i &gt;= 10 </span><span class="cov0" title="0">{ // Limit display to prevent spam
+                                fmt.Printf("   ... and %d more\n", len(status.ActiveConnections)-10)
+                                break</span>
+                        }
+                        <span class="cov0" title="0">fmt.Printf("   %s → %s (%s)\n", conn.Source, conn.Destination, conn.Protocol)</span>
+                }
+        }
+
+        <span class="cov0" title="0">fmt.Printf("\n📊 Statistics:\n")
+        fmt.Printf("   Uptime: %s\n", status.Uptime)
+        fmt.Printf("   Bytes In/Out: %s / %s\n", formatBytes(status.BytesIn), formatBytes(status.BytesOut))
+
+        return nil</span>
+}
+
+func printStatusJSON(manager *nat.Manager, status *nat.Status) error <span class="cov0" title="0">{
+        config := manager.GetConfig()
+        if config == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("no NAT configuration found")
+        }</span>
+
+        // For JSON output, you'd typically use encoding/json
+        // This is a simplified version
+        <span class="cov0" title="0">fmt.Printf(`{
+  "running": %t,
+  "external_interface": "%s",
+  "internal_interface": "%s",
+  "external_ip": "%s",
+  "internal_network": "%s",
+  "ip_forwarding": %t,
+  "pfctl_enabled": %t,
+  "dhcp_running": %t,
+  "connected_devices": %d,
+  "active_connections": %d,
+  "uptime": "%s",
+  "bytes_in": %d,
+  "bytes_out": %d
+}`,
+                status.Running,
+                config.ExternalInterface,
+                config.InternalInterface,
+                status.ExternalIP,
+                config.InternalNetwork,
+                status.IPForwarding,
+                status.PFCTLEnabled,
+                status.DHCPRunning,
+                len(status.ConnectedDevices),
+                len(status.ActiveConnections),
+                status.Uptime,
+                status.BytesIn,
+                status.BytesOut,
+        )
+        return nil</span>
+}
+
+func formatBool(b bool) string <span class="cov0" title="0">{
+        if b </span><span class="cov0" title="0">{
+                return "✅ Enabled"
+        }</span>
+        <span class="cov0" title="0">return "❌ Disabled"</span>
+}
+
+func formatBytes(bytes uint64) string <span class="cov0" title="0">{
+        const unit = 1024
+        if bytes &lt; unit </span><span class="cov0" title="0">{
+                return fmt.Sprintf("%d B", bytes)
+        }</span>
+        <span class="cov0" title="0">div, exp := uint64(unit), 0
+        for n := bytes / unit; n &gt;= unit; n /= unit </span><span class="cov0" title="0">{
+                div *= unit
+                exp++
+        }</span>
+        <span class="cov0" title="0">return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])</span>
+}
+
+func init() <span class="cov0" title="0">{
+        rootCmd.AddCommand(statusCmd)
+
+        statusCmd.Flags().BoolVar(&amp;jsonOutput, "json", false, "output status in JSON format")
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package cli
+
+import (
+        "fmt"
+
+        "github.com/spf13/cobra"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/config"
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+var force bool
+
+// stopCmd represents the stop command
+var stopCmd = &amp;cobra.Command{
+        Use:   "stop",
+        Short: "Stop NAT service",
+        Long: `Stop the NAT service and clean up all configuration.
+
+This will:
+- Disable pfctl NAT rules
+- Stop DHCP server
+- Remove/destroy internal interface
+- Disable IP forwarding
+- Clean up temporary files
+
+Example:
+  nat-manager stop
+  nat-manager stop --force  # Force stop even if some cleanup fails`,
+        RunE: func(_ *cobra.Command, _ []string) error <span class="cov0" title="0">{
+                // Load config
+                cfg, err := config.Load()
+                if err != nil </span><span class="cov0" title="0">{
+                        if !force </span><span class="cov0" title="0">{
+                                return fmt.Errorf("failed to load config: %w", err)
+                        }</span>
+                        // Use default config for force stop
+                        <span class="cov0" title="0">cfg = config.Default()</span>
+                }
+
+                // Convert config to NAT config
+                <span class="cov0" title="0">natConfig := &amp;nat.Config{
+                        ExternalInterface: cfg.ExternalInterface,
+                        InternalInterface: cfg.InternalInterface,
+                        InternalNetwork:   cfg.InternalNetwork,
+                        DHCPRange: nat.DHCPRange{
+                                Start: cfg.DHCPRange.Start,
+                                End:   cfg.DHCPRange.End,
+                                Lease: cfg.DHCPRange.Lease,
+                        },
+                        DNSServers: cfg.DNSServers,
+                        Active:     cfg.Active,
+                }
+
+                // Create NAT manager
+                manager := nat.NewManager(natConfig)
+
+                // Check if running
+                if !manager.IsActive() &amp;&amp; !force </span><span class="cov0" title="0">{
+                        return fmt.Errorf("NAT is not running")
+                }</span>
+
+                // Stop NAT
+                <span class="cov0" title="0">if err := manager.StopNAT(); err != nil </span><span class="cov0" title="0">{
+                        if !force </span><span class="cov0" title="0">{
+                                return fmt.Errorf("failed to stop NAT: %w", err)
+                        }</span>
+                        <span class="cov0" title="0">fmt.Printf("Warning: some cleanup failed: %v\n", err)</span>
+                }
+
+                <span class="cov0" title="0">fmt.Printf("✅ NAT stopped successfully\n")
+
+                return nil</span>
+        },
+}
+
+func init() <span class="cov0" title="0">{
+        rootCmd.AddCommand(stopCmd)
+
+        stopCmd.Flags().BoolVarP(&amp;force, "force", "f", false, "force stop even if some operations fail")
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">// Package config provides configuration management for the NAT manager
+package config
+
+import (
+        "fmt"
+        "os"
+        "path/filepath"
+
+        "gopkg.in/yaml.v3"
+)
+
+// Config represents the NAT manager configuration
+type Config struct {
+        ExternalInterface string    `yaml:"external_interface" json:"external_interface"`
+        InternalInterface string    `yaml:"internal_interface" json:"internal_interface"`
+        InternalNetwork   string    `yaml:"internal_network" json:"internal_network"`
+        DHCPRange         DHCPRange `yaml:"dhcp_range" json:"dhcp_range"`
+        DNSServers        []string  `yaml:"dns_servers" json:"dns_servers"`
+
+        // Runtime fields (not saved to config)
+        Active bool `yaml:"-" json:"active"`
+}
+
+// DHCPRange represents the DHCP IP range configuration
+type DHCPRange struct {
+        Start string `yaml:"start" json:"start"`
+        End   string `yaml:"end" json:"end"`
+        Lease string `yaml:"lease" json:"lease"`
+}
+
+// Default returns a default configuration
+func Default() *Config <span class="cov8" title="1">{
+        return &amp;Config{
+                ExternalInterface: "",
+                InternalInterface: "bridge100",
+                InternalNetwork:   "192.168.100",
+                DHCPRange: DHCPRange{
+                        Start: "192.168.100.100",
+                        End:   "192.168.100.200",
+                        Lease: "12h",
+                },
+                DNSServers: []string{"8.8.8.8", "8.8.4.4"},
+        }
+}</span>
+
+// Load reads configuration from the default location
+func Load() (*Config, error) <span class="cov0" title="0">{
+        configPath, err := getConfigPath()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get config path: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return LoadFrom(configPath)</span>
+}
+
+// LoadFrom reads configuration from the specified path
+func LoadFrom(path string) (*Config, error) <span class="cov8" title="1">{
+        // If file doesn't exist, return default config
+        if _, err := os.Stat(path); os.IsNotExist(err) </span><span class="cov0" title="0">{
+                return Default(), nil
+        }</span>
+
+        <span class="cov8" title="1">data, err := os.ReadFile(path)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to read config file: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">var config Config
+        if err := yaml.Unmarshal(data, &amp;config); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse config file: %w", err)
+        }</span>
+
+        // Validate and set defaults for missing fields
+        <span class="cov8" title="1">if config.InternalNetwork == "" </span><span class="cov0" title="0">{
+                config.InternalNetwork = "192.168.100"
+        }</span>
+        <span class="cov8" title="1">if config.DHCPRange.Start == "" </span><span class="cov0" title="0">{
+                config.DHCPRange.Start = fmt.Sprintf("%s.100", config.InternalNetwork)
+        }</span>
+        <span class="cov8" title="1">if config.DHCPRange.End == "" </span><span class="cov0" title="0">{
+                config.DHCPRange.End = fmt.Sprintf("%s.200", config.InternalNetwork)
+        }</span>
+        <span class="cov8" title="1">if config.DHCPRange.Lease == "" </span><span class="cov0" title="0">{
+                config.DHCPRange.Lease = "12h"
+        }</span>
+        <span class="cov8" title="1">if len(config.DNSServers) == 0 </span><span class="cov0" title="0">{
+                config.DNSServers = []string{"8.8.8.8", "8.8.4.4"}
+        }</span>
+
+        <span class="cov8" title="1">return &amp;config, nil</span>
+}
+
+// Save writes the configuration to the default location
+func (c *Config) Save() error <span class="cov0" title="0">{
+        configPath, err := getConfigPath()
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to get config path: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">return c.SaveTo(configPath)</span>
+}
+
+// SaveTo writes the configuration to the specified path
+func (c *Config) SaveTo(path string) error <span class="cov8" title="1">{
+        // Ensure directory exists
+        if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to create config directory: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">data, err := yaml.Marshal(c)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to marshal config: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if err := os.WriteFile(path, data, 0644); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to write config file: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// Validate checks if the configuration is valid
+func (c *Config) Validate() error <span class="cov8" title="1">{
+        if c.ExternalInterface == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("external interface is required")
+        }</span>
+
+        <span class="cov8" title="1">if c.InternalInterface == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("internal interface is required")
+        }</span>
+
+        <span class="cov8" title="1">if c.InternalNetwork == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("internal network is required")
+        }</span>
+
+        <span class="cov8" title="1">if c.DHCPRange.Start == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("DHCP start address is required")
+        }</span>
+
+        <span class="cov8" title="1">if c.DHCPRange.End == "" </span><span class="cov8" title="1">{
+                return fmt.Errorf("DHCP end address is required")
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+// GetGatewayIP returns the gateway IP for the internal network
+func (c *Config) GetGatewayIP() string <span class="cov8" title="1">{
+        return fmt.Sprintf("%s.1", c.InternalNetwork)
+}</span>
+
+// GetInternalCIDR returns the internal network in CIDR notation
+func (c *Config) GetInternalCIDR() string <span class="cov8" title="1">{
+        return fmt.Sprintf("%s.0/24", c.InternalNetwork)
+}</span>
+
+// getConfigPath returns the default configuration file path
+func getConfigPath() (string, error) <span class="cov0" title="0">{
+        home, err := os.UserHomeDir()
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov0" title="0">return filepath.Join(home, ".config", "nat-manager", "config.yaml"), nil</span>
+}
+
+// GetStateFilePath returns the path for runtime state file
+func GetStateFilePath() (string, error) <span class="cov0" title="0">{
+        home, err := os.UserHomeDir()
+        if err != nil </span><span class="cov0" title="0">{
+                return "", err
+        }</span>
+
+        <span class="cov0" title="0">return filepath.Join(home, ".config", "nat-manager", "state.yaml"), nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">// Package nat provides core NAT functionality for macOS systems
+package nat
+
+import (
+        "bufio"
+        "fmt"
+        "net"
+        "os/exec"
+        "regexp"
+        "strings"
+)
+
+// Config represents the configuration for NAT
+type Config struct {
+        ExternalInterface string
+        InternalInterface string
+        InternalNetwork   string
+        DHCPRange         DHCPRange
+        DNSServers        []string
+        Active            bool
+}
+
+// DHCPRange represents DHCP IP range configuration
+type DHCPRange struct {
+        Start string
+        End   string
+        Lease string
+}
+
+// NetworkInterface represents a network interface
+type NetworkInterface struct {
+        Name   string
+        Type   string
+        Status string
+        IP     string
+}
+
+// Connection represents a network connection
+type Connection struct {
+        Source      string
+        Destination string
+        Protocol    string
+        State       string
+}
+
+// Manager manages NAT operations
+type Manager struct {
+        config  *Config
+        dhcpPid int
+}
+
+// NewManager creates a new NAT manager
+func NewManager(config *Config) *Manager <span class="cov8" title="1">{
+        return &amp;Manager{
+                config: config,
+        }
+}</span>
+
+// GetNetworkInterfaces returns a list of available network interfaces
+func (m *Manager) GetNetworkInterfaces() ([]NetworkInterface, error) <span class="cov8" title="1">{
+        interfaces, err := net.Interfaces()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to get network interfaces: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">var result []NetworkInterface
+        for _, iface := range interfaces </span><span class="cov8" title="1">{
+                addrs, err := iface.Addrs()
+                if err != nil </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">var ip string
+                for _, addr := range addrs </span><span class="cov8" title="1">{
+                        if ipnet, ok := addr.(*net.IPNet); ok &amp;&amp; !ipnet.IP.IsLoopback() </span><span class="cov8" title="1">{
+                                if ipnet.IP.To4() != nil </span><span class="cov8" title="1">{
+                                        ip = ipnet.IP.String()
+                                        break</span>
+                                }
+                        }
+                }
+
+                <span class="cov8" title="1">status := "down"
+                if iface.Flags&amp;net.FlagUp != 0 </span><span class="cov8" title="1">{
+                        status = "up"
+                }</span>
+
+                <span class="cov8" title="1">result = append(result, NetworkInterface{
+                        Name:   iface.Name,
+                        Type:   getInterfaceType(iface.Name),
+                        Status: status,
+                        IP:     ip,
+                })</span>
+        }
+
+        <span class="cov8" title="1">return result, nil</span>
+}
+
+// StartNAT starts the NAT service
+func (m *Manager) StartNAT() error <span class="cov0" title="0">{
+        if m.config == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("NAT config is nil")
+        }</span>
+
+        // Create bridge interface if it doesn't exist
+        <span class="cov0" title="0">if strings.HasPrefix(m.config.InternalInterface, "bridge") </span><span class="cov0" title="0">{
+                cmd := exec.Command("ifconfig", m.config.InternalInterface, "create")
+                _ = cmd.Run() // Interface might already exist, which is fine
+
+                // Configure bridge interface
+                bridgeIP := m.config.InternalNetwork + ".1"
+                cmd = exec.Command("ifconfig", m.config.InternalInterface, "inet", bridgeIP, "netmask", "255.255.255.0")
+                if err := cmd.Run(); err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to configure bridge interface: %w", err)
+                }</span>
+        }
+
+        // Enable IP forwarding
+        <span class="cov0" title="0">cmd := exec.Command("sysctl", "-w", "net.inet.ip.forwarding=1")
+        if err := cmd.Run(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to enable IP forwarding: %w", err)
+        }</span>
+
+        // Set up NAT rules with pfctl
+        <span class="cov0" title="0">natRule := fmt.Sprintf("nat on %s from %s.0/24 to any -&gt; (%s)",
+                m.config.ExternalInterface, m.config.InternalNetwork, m.config.ExternalInterface)
+
+        cmd = exec.Command("pfctl", "-e")
+        if err := cmd.Run(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to enable pfctl: %w", err)
+        }</span>
+
+        // Write NAT rule to pfctl
+        <span class="cov0" title="0">cmd = exec.Command("sh", "-c", fmt.Sprintf("echo '%s' | pfctl -f -", natRule))
+        if err := cmd.Run(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to set NAT rule: %w", err)
+        }</span>
+
+        // Start DHCP server
+        <span class="cov0" title="0">if err := m.startDHCPServer(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to start DHCP server: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">m.config.Active = true
+        return nil</span>
+}
+
+// StopNAT stops the NAT service
+func (m *Manager) StopNAT() error <span class="cov0" title="0">{
+        if m.config == nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("NAT config is nil")
+        }</span>
+
+        // Disable pfctl
+        <span class="cov0" title="0">_ = exec.Command("pfctl", "-d").Run()
+
+        // Destroy bridge interface if we created it
+        if strings.HasPrefix(m.config.InternalInterface, "bridge") </span><span class="cov0" title="0">{
+                _ = exec.Command("ifconfig", m.config.InternalInterface, "destroy").Run()
+        }</span>
+
+        // Stop DHCP server
+        <span class="cov0" title="0">_ = exec.Command("killall", "dnsmasq").Run()
+
+        // Disable IP forwarding
+        _ = exec.Command("sysctl", "-w", "net.inet.ip.forwarding=0").Run()
+
+        m.config.Active = false
+        return nil</span>
+}
+
+// GetActiveConnections returns active network connections
+func (m *Manager) GetActiveConnections() ([]Connection, error) <span class="cov8" title="1">{
+        connections := make([]Connection, 0)
+
+        cmd := exec.Command("netstat", "-n")
+        output, err := cmd.Output()
+        if err != nil </span><span class="cov0" title="0">{
+                // Return empty slice instead of error to avoid breaking status
+                return connections, nil
+        }</span>
+        <span class="cov8" title="1">scanner := bufio.NewScanner(strings.NewReader(string(output)))
+        re := regexp.MustCompile(`^(tcp|udp)\s+\d+\s+\d+\s+(\S+)\s+(\S+)\s+(\S+)`)
+
+        for scanner.Scan() </span><span class="cov8" title="1">{
+                line := scanner.Text()
+                matches := re.FindStringSubmatch(line)
+                if len(matches) == 5 </span><span class="cov0" title="0">{
+                        connections = append(connections, Connection{
+                                Protocol:    strings.ToUpper(matches[1]),
+                                Source:      matches[2],
+                                Destination: matches[3],
+                                State:       matches[4],
+                        })
+                }</span>
+        }
+
+        <span class="cov8" title="1">return connections, nil</span>
+}
+
+// IsActive returns whether NAT is currently active
+func (m *Manager) IsActive() bool <span class="cov8" title="1">{
+        if m.config == nil </span><span class="cov8" title="1">{
+                return false
+        }</span>
+        <span class="cov8" title="1">return m.config.Active</span>
+}
+
+// GetConfig returns the current NAT configuration
+func (m *Manager) GetConfig() *Config <span class="cov0" title="0">{
+        return m.config
+}</span>
+
+// Cleanup performs cleanup operations
+func (m *Manager) Cleanup() <span class="cov0" title="0">{
+        _ = exec.Command("pfctl", "-d").Run()
+        _ = exec.Command("killall", "dnsmasq").Run()
+        _ = exec.Command("sysctl", "-w", "net.inet.ip.forwarding=0").Run()
+}</span>
+
+// startDHCPServer starts the DHCP server using dnsmasq
+func (m *Manager) startDHCPServer() error <span class="cov0" title="0">{
+        dhcpRange := fmt.Sprintf("%s.%s,%s.%s,%s",
+                m.config.InternalNetwork, m.config.DHCPRange.Start,
+                m.config.InternalNetwork, m.config.DHCPRange.End,
+                m.config.DHCPRange.Lease)
+
+        args := []string{
+                "--interface=" + m.config.InternalInterface,
+                "--dhcp-range=" + dhcpRange,
+                "--no-daemon",
+                "--log-queries",
+                "--log-dhcp",
+        }
+
+        // Add DNS servers
+        for _, dns := range m.config.DNSServers </span><span class="cov0" title="0">{
+                args = append(args, "--server="+dns)
+        }</span>
+
+        <span class="cov0" title="0">cmd := exec.Command("dnsmasq", args...)
+        if err := cmd.Start(); err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to start dnsmasq: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">m.dhcpPid = cmd.Process.Pid
+        return nil</span>
+}
+
+// ConnectedDevice represents a connected device
+type ConnectedDevice struct {
+        IP        string
+        MAC       string
+        Hostname  string
+        LeaseTime string
+}
+
+// Status represents NAT status information
+type Status struct {
+        Active            bool
+        Running           bool // Alias for Active for backward compatibility
+        ExternalIP        string
+        Uptime            string
+        ConnectedDevices  []ConnectedDevice
+        ActiveConnections []Connection
+        BytesIn           uint64
+        BytesOut          uint64
+        IPForwarding      bool
+        PFCTLEnabled      bool
+        DHCPRunning       bool
+}
+
+// GetStatus returns current NAT status
+func (m *Manager) GetStatus() (*Status, error) <span class="cov8" title="1">{
+        connections, _ := m.GetActiveConnections()
+        if connections == nil </span><span class="cov0" title="0">{
+                connections = []Connection{}
+        }</span>
+
+        <span class="cov8" title="1">isActive := m.IsActive()
+        status := &amp;Status{
+                Active:            isActive,
+                Running:           isActive, // Alias for backward compatibility
+                ExternalIP:        "N/A",
+                Uptime:            "N/A",
+                ConnectedDevices:  []ConnectedDevice{},
+                ActiveConnections: connections,
+                BytesIn:           0,
+                BytesOut:          0,
+                IPForwarding:      isActive,
+                PFCTLEnabled:      isActive,
+                DHCPRunning:       isActive,
+        }
+
+        if m.config == nil </span><span class="cov0" title="0">{
+                return status, nil
+        }</span>
+
+        // Try to get external IP
+        <span class="cov8" title="1">if m.config.ExternalInterface != "" </span><span class="cov8" title="1">{
+                cmd := exec.Command("ifconfig", m.config.ExternalInterface)
+                if output, err := cmd.Output(); err == nil </span><span class="cov8" title="1">{
+                        re := regexp.MustCompile(`inet (\d+\.\d+\.\d+\.\d+)`)
+                        if matches := re.FindStringSubmatch(string(output)); len(matches) &gt; 1 </span><span class="cov8" title="1">{
+                                status.ExternalIP = matches[1]
+                        }</span>
+                }
+        }
+
+        <span class="cov8" title="1">return status, nil</span>
+}
+
+// getInterfaceType determines the type of network interface
+func getInterfaceType(name string) string <span class="cov8" title="1">{
+        if strings.HasPrefix(name, "en") </span><span class="cov8" title="1">{
+                return "Ethernet"
+        }</span> else<span class="cov8" title="1"> if strings.HasPrefix(name, "wi") || strings.HasPrefix(name, "wlan") </span><span class="cov0" title="0">{
+                return "WiFi"
+        }</span> else<span class="cov8" title="1"> if strings.HasPrefix(name, "bridge") </span><span class="cov8" title="1">{
+                return "Bridge"
+        }</span> else<span class="cov8" title="1"> if strings.HasPrefix(name, "lo") </span><span class="cov8" title="1">{
+                return "Loopback"
+        }</span>
+        <span class="cov8" title="1">return "Other"</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">// Package tui provides the terminal user interface for the NAT manager
+package tui
+
+import (
+        "log"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "github.com/charmbracelet/bubbles/list"
+        "github.com/charmbracelet/bubbles/table"
+        "github.com/charmbracelet/bubbles/textinput"
+        tea "github.com/charmbracelet/bubbletea"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/config"
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+// App represents the TUI application
+type App struct {
+        config  *config.Config
+        manager *nat.Manager
+}
+
+// NewApp creates a new TUI application
+func NewApp(cfg *config.Config) *App <span class="cov0" title="0">{
+        // Convert config.Config to nat.Config
+        natConfig := &amp;nat.Config{
+                ExternalInterface: cfg.ExternalInterface,
+                InternalInterface: cfg.InternalInterface,
+                InternalNetwork:   cfg.InternalNetwork,
+                DHCPRange: nat.DHCPRange{
+                        Start: cfg.DHCPRange.Start,
+                        End:   cfg.DHCPRange.End,
+                        Lease: cfg.DHCPRange.Lease,
+                },
+                DNSServers: cfg.DNSServers,
+                Active:     cfg.Active,
+        }
+
+        return &amp;App{
+                config:  cfg,
+                manager: nat.NewManager(natConfig),
+        }
+}</span>
+
+// Run starts the TUI application
+func (a *App) Run() error <span class="cov0" title="0">{
+        p := tea.NewProgram(a.initialModel(), tea.WithAltScreen())
+
+        // Handle cleanup on interrupt
+        c := make(chan os.Signal, 1)
+        signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+        go func() </span><span class="cov0" title="0">{
+                &lt;-c
+                p.Kill()
+                a.cleanup()
+                os.Exit(0)
+        }</span>()
+
+        <span class="cov0" title="0">_, err := p.Run()
+        return err</span>
+}
+
+func (a *App) initialModel() Model <span class="cov0" title="0">{
+        // Initialize text input
+        ti := textinput.New()
+        ti.Placeholder = "Enter value..."
+        ti.CharLimit = 50
+        ti.Width = 30
+
+        // Initialize list
+        items := []list.Item{}
+        l := list.New(items, list.NewDefaultDelegate(), 0, 0)
+        l.Title = "Network Interfaces"
+
+        // Initialize table
+        columns := []table.Column{
+                {Title: "Source", Width: 20},
+                {Title: "Destination", Width: 20},
+                {Title: "Protocol", Width: 10},
+                {Title: "State", Width: 12},
+        }
+        t := table.New(
+                table.WithColumns(columns),
+                table.WithFocused(true),
+                table.WithHeight(10),
+        )
+
+        return Model{
+                app:         a,
+                config:      a.config,
+                manager:     a.manager,
+                state:       "menu",
+                currentView: "menu",
+                list:        l,
+                table:       t,
+                textInput:   ti,
+        }
+}</span>
+
+func (a *App) cleanup() <span class="cov0" title="0">{
+        // Attempt to stop NAT service if running
+        if a.manager.IsActive() </span><span class="cov0" title="0">{
+                log.Println("Stopping NAT service...")
+                if err := a.manager.StopNAT(); err != nil </span><span class="cov0" title="0">{
+                        log.Printf("Warning: failed to stop NAT: %v", err)
+                }</span>
+        }
+        <span class="cov0" title="0">a.manager.Cleanup()</span>
+}
+
+// Messages for the TUI
+type tickMsg time.Time
+type interfacesMsg struct {
+        interfaces []nat.NetworkInterface
+}
+type connectionsMsg struct {
+        connections []nat.Connection
+}
+type natResultMsg struct {
+        success bool
+        err     error
+}
+
+// Commands
+func tick() tea.Cmd <span class="cov0" title="0">{
+        return tea.Tick(time.Second*2, func(t time.Time) tea.Msg </span><span class="cov0" title="0">{
+                return tickMsg(t)
+        }</span>)
+}
+
+func getInterfaces(manager *nat.Manager) tea.Cmd <span class="cov0" title="0">{
+        return func() tea.Msg </span><span class="cov0" title="0">{
+                interfaces, err := manager.GetNetworkInterfaces()
+                if err != nil </span><span class="cov0" title="0">{
+                        return interfacesMsg{interfaces: []nat.NetworkInterface{}}
+                }</span>
+                <span class="cov0" title="0">return interfacesMsg{interfaces: interfaces}</span>
+        }
+}
+
+func getConnections(manager *nat.Manager) tea.Cmd <span class="cov0" title="0">{
+        return func() tea.Msg </span><span class="cov0" title="0">{
+                connections, err := manager.GetActiveConnections()
+                if err != nil </span><span class="cov0" title="0">{
+                        return connectionsMsg{connections: []nat.Connection{}}
+                }</span>
+                <span class="cov0" title="0">return connectionsMsg{connections: connections}</span>
+        }
+}
+
+func setupNAT(manager *nat.Manager) tea.Cmd <span class="cov0" title="0">{
+        return func() tea.Msg </span><span class="cov0" title="0">{
+                err := manager.StartNAT()
+                if err != nil </span><span class="cov0" title="0">{
+                        return natResultMsg{success: false, err: err}
+                }</span>
+                <span class="cov0" title="0">return natResultMsg{success: true, err: nil}</span>
+        }
+}
+
+func teardownNAT(manager *nat.Manager) tea.Cmd <span class="cov0" title="0">{
+        return func() tea.Msg </span><span class="cov0" title="0">{
+                err := manager.StopNAT()
+                if err != nil </span><span class="cov0" title="0">{
+                        return natResultMsg{success: false, err: err}
+                }</span>
+                <span class="cov0" title="0">return natResultMsg{success: true, err: nil}</span>
+        }
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package tui
+
+import (
+        "fmt"
+
+        "github.com/charmbracelet/bubbles/list"
+        "github.com/charmbracelet/bubbles/table"
+        "github.com/charmbracelet/bubbles/textinput"
+        tea "github.com/charmbracelet/bubbletea"
+
+        "github.com/scttfrdmn/macos-nat-manager/internal/config"
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+// Model represents the TUI application model
+type Model struct {
+        app         *App
+        config      *config.Config
+        manager     *nat.Manager
+        state       string
+        interfaces  []nat.NetworkInterface
+        connections []nat.Connection
+        list        list.Model
+        table       table.Model
+        textInput   textinput.Model
+        err         error
+        width       int
+        height      int
+        currentView string
+        inputField  string
+}
+
+// Init initializes the model
+func (m Model) Init() tea.Cmd <span class="cov0" title="0">{
+        return tea.Batch(
+                getInterfaces(m.manager),
+                tick(),
+        )
+}</span>
+
+// Update handles messages and updates the model
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        switch msg := msg.(type) </span>{
+        case tea.WindowSizeMsg:<span class="cov0" title="0">
+                return m.handleWindowSize(msg)</span>
+        case interfacesMsg:<span class="cov0" title="0">
+                return m.handleInterfaces(msg)</span>
+        case connectionsMsg:<span class="cov0" title="0">
+                return m.handleConnections(msg)</span>
+        case natResultMsg:<span class="cov0" title="0">
+                return m.handleNATResult(msg)</span>
+        case tickMsg:<span class="cov0" title="0">
+                return m.handleTick()</span>
+        case tea.KeyMsg:<span class="cov0" title="0">
+                return m.handleKeyMsg(msg)</span>
+        }
+        <span class="cov0" title="0">return m, nil</span>
+}
+
+func (m Model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        m.width = msg.Width
+        m.height = msg.Height
+        m.list.SetSize(msg.Width-4, msg.Height-10)
+        return m, nil
+}</span>
+
+func (m Model) handleInterfaces(msg interfacesMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        m.interfaces = msg.interfaces
+        items := make([]list.Item, len(m.interfaces))
+        for i, iface := range m.interfaces </span><span class="cov0" title="0">{
+                items[i] = interfaceItem{iface}
+        }</span>
+        <span class="cov0" title="0">m.list.SetItems(items)
+        return m, nil</span>
+}
+
+func (m Model) handleConnections(msg connectionsMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        m.connections = msg.connections
+        rows := make([]table.Row, len(m.connections))
+        for i, conn := range m.connections </span><span class="cov0" title="0">{
+                rows[i] = table.Row{conn.Source, conn.Destination, conn.Protocol, conn.State}
+        }</span>
+        <span class="cov0" title="0">m.table.SetRows(rows)
+        return m, nil</span>
+}
+
+func (m Model) handleNATResult(msg natResultMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        if msg.success </span><span class="cov0" title="0">{
+                m.err = nil
+        }</span> else<span class="cov0" title="0"> {
+                m.err = msg.err
+        }</span>
+        <span class="cov0" title="0">return m, nil</span>
+}
+
+func (m Model) handleTick() (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        if m.manager.IsActive() </span><span class="cov0" title="0">{
+                return m, tea.Batch(getConnections(m.manager), tick())
+        }</span>
+        <span class="cov0" title="0">return m, tick()</span>
+}
+
+func (m Model) handleKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        switch m.currentView </span>{
+        case "menu":<span class="cov0" title="0">
+                return m.handleMenuKeys(msg)</span>
+        case "interfaces":<span class="cov0" title="0">
+                return m.handleInterfaceKeys(msg)</span>
+        case "config":<span class="cov0" title="0">
+                return m.handleConfigKeys(msg)</span>
+        case "monitor":<span class="cov0" title="0">
+                return m.handleMonitorKeys(msg)</span>
+        case "input":<span class="cov0" title="0">
+                return m.handleInputKeys(msg)</span>
+        }
+        <span class="cov0" title="0">return m, nil</span>
+}
+
+func (m Model) handleMenuKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        switch msg.String() </span>{
+        case "q", "esc", "ctrl+c":<span class="cov0" title="0">
+                m.app.cleanup()
+                return m, tea.Quit</span>
+        case "1":<span class="cov0" title="0">
+                m.currentView = "interfaces"
+                return m, getInterfaces(m.manager)</span>
+        case "2":<span class="cov0" title="0">
+                m.currentView = "config"
+                return m, nil</span>
+        case "3":<span class="cov0" title="0">
+                if m.config.ExternalInterface != "" &amp;&amp; m.config.InternalInterface != "" </span><span class="cov0" title="0">{
+                        return m, setupNAT(m.manager)
+                }</span>
+                <span class="cov0" title="0">m.err = fmt.Errorf("please configure interfaces first")
+                return m, nil</span>
+        case "4":<span class="cov0" title="0">
+                if m.manager.IsActive() </span><span class="cov0" title="0">{
+                        m.currentView = "monitor"
+                        return m, getConnections(m.manager)
+                }</span>
+                <span class="cov0" title="0">m.err = fmt.Errorf("NAT is not active")
+                return m, nil</span>
+        case "5":<span class="cov0" title="0">
+                if m.manager.IsActive() </span><span class="cov0" title="0">{
+                        return m, teardownNAT(m.manager)
+                }</span>
+                <span class="cov0" title="0">m.err = fmt.Errorf("NAT is not active")
+                return m, nil</span>
+        }
+        <span class="cov0" title="0">return m, nil</span>
+}
+
+func (m Model) handleInterfaceKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        switch msg.String() </span>{
+        case "q", "esc":<span class="cov0" title="0">
+                m.currentView = "menu"
+                return m, nil</span>
+        case "e":<span class="cov0" title="0">
+                if len(m.interfaces) &gt; 0 </span><span class="cov0" title="0">{
+                        selected := m.list.SelectedItem().(interfaceItem)
+                        m.config.ExternalInterface = selected.iface.Name
+                }</span>
+                <span class="cov0" title="0">return m, nil</span>
+        case "i":<span class="cov0" title="0">
+                if len(m.interfaces) &gt; 0 </span><span class="cov0" title="0">{
+                        selected := m.list.SelectedItem().(interfaceItem)
+                        m.config.InternalInterface = selected.iface.Name
+                }</span>
+                <span class="cov0" title="0">return m, nil</span>
+        case "r":<span class="cov0" title="0">
+                return m, getInterfaces(m.manager)</span>
+        }
+
+        <span class="cov0" title="0">var cmd tea.Cmd
+        m.list, cmd = m.list.Update(msg)
+        return m, cmd</span>
+}
+
+func (m Model) handleConfigKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        switch msg.String() </span>{
+        case "q", "esc":<span class="cov0" title="0">
+                m.currentView = "menu"
+                return m, nil</span>
+        case "1":<span class="cov0" title="0">
+                m.currentView = "input"
+                m.inputField = "network"
+                m.textInput.SetValue(m.config.InternalNetwork)
+                m.textInput.Focus()
+                return m, nil</span>
+        case "2":<span class="cov0" title="0">
+                m.currentView = "input"
+                m.inputField = "dhcp_start"
+                m.textInput.SetValue(m.config.DHCPRange.Start)
+                m.textInput.Focus()
+                return m, nil</span>
+        case "3":<span class="cov0" title="0">
+                m.currentView = "input"
+                m.inputField = "dhcp_end"
+                m.textInput.SetValue(m.config.DHCPRange.End)
+                m.textInput.Focus()
+                return m, nil</span>
+        }
+        <span class="cov0" title="0">return m, nil</span>
+}
+
+func (m Model) handleMonitorKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        switch msg.String() </span>{
+        case "q", "esc":<span class="cov0" title="0">
+                m.currentView = "menu"
+                return m, nil</span>
+        case "r":<span class="cov0" title="0">
+                return m, getConnections(m.manager)</span>
+        }
+
+        <span class="cov0" title="0">var cmd tea.Cmd
+        m.table, cmd = m.table.Update(msg)
+        return m, cmd</span>
+}
+
+func (m Model) handleInputKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) <span class="cov0" title="0">{
+        switch msg.String() </span>{
+        case "enter":<span class="cov0" title="0">
+                value := m.textInput.Value()
+                switch m.inputField </span>{
+                case "network":<span class="cov0" title="0">
+                        m.config.InternalNetwork = value</span>
+                case "dhcp_start":<span class="cov0" title="0">
+                        m.config.DHCPRange.Start = value</span>
+                case "dhcp_end":<span class="cov0" title="0">
+                        m.config.DHCPRange.End = value</span>
+                }
+                <span class="cov0" title="0">m.textInput.Blur()
+                m.textInput.SetValue("")
+                m.currentView = "config"
+
+                // Save configuration
+                if err := m.config.Save(); err != nil </span><span class="cov0" title="0">{
+                        m.err = fmt.Errorf("failed to save config: %w", err)
+                }</span>
+
+                <span class="cov0" title="0">return m, nil</span>
+        case "esc":<span class="cov0" title="0">
+                m.textInput.Blur()
+                m.textInput.SetValue("")
+                m.currentView = "config"
+                return m, nil</span>
+        }
+
+        <span class="cov0" title="0">var cmd tea.Cmd
+        m.textInput, cmd = m.textInput.Update(msg)
+        return m, cmd</span>
+}
+
+// Interface item for list
+type interfaceItem struct {
+        iface nat.NetworkInterface
+}
+
+func (i interfaceItem) Title() string <span class="cov0" title="0">{
+        return i.iface.Name
+}</span>
+
+func (i interfaceItem) Description() string <span class="cov0" title="0">{
+        return fmt.Sprintf("%s - %s (%s)", i.iface.Type, i.iface.IP, i.iface.Status)
+}</span>
+
+func (i interfaceItem) FilterValue() string <span class="cov0" title="0">{
+        return i.iface.Name
+}</span>
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package tui
+
+import (
+        "fmt"
+        "strings"
+
+        "github.com/charmbracelet/lipgloss"
+        "github.com/scttfrdmn/macos-nat-manager/internal/nat"
+)
+
+// Styles
+var (
+        titleStyle = lipgloss.NewStyle().
+                        Foreground(lipgloss.Color("205")).
+                        Bold(true).
+                        Margin(1, 0)
+
+        helpStyle = lipgloss.NewStyle().
+                        Foreground(lipgloss.Color("241")).
+                        Margin(1, 0)
+
+        errorStyle = lipgloss.NewStyle().
+                        Foreground(lipgloss.Color("196")).
+                        Bold(true)
+
+        successStyle = lipgloss.NewStyle().
+                        Foreground(lipgloss.Color("46")).
+                        Bold(true)
+
+        statusStyle = lipgloss.NewStyle().
+                        Padding(1, 2).
+                        Border(lipgloss.RoundedBorder()).
+                        BorderForeground(lipgloss.Color("62"))
+)
+
+// View renders the current view
+func (m Model) View() string <span class="cov0" title="0">{
+        switch m.currentView </span>{
+        case "menu":<span class="cov0" title="0">
+                return m.menuView()</span>
+        case "interfaces":<span class="cov0" title="0">
+                return m.interfacesView()</span>
+        case "config":<span class="cov0" title="0">
+                return m.configView()</span>
+        case "monitor":<span class="cov0" title="0">
+                return m.monitorView()</span>
+        case "input":<span class="cov0" title="0">
+                return m.inputView()</span>
+        default:<span class="cov0" title="0">
+                return m.menuView()</span>
+        }
+}
+
+func (m Model) menuView() string <span class="cov0" title="0">{
+        var status string
+        if m.manager.IsActive() </span><span class="cov0" title="0">{
+                status = successStyle.Render("🟢 NAT Active")
+        }</span> else<span class="cov0" title="0"> {
+                status = errorStyle.Render("🔴 NAT Inactive")
+        }</span>
+
+        <span class="cov0" title="0">content := titleStyle.Render("macOS NAT Manager") + "\n\n"
+        content += statusStyle.Render(status) + "\n\n"
+
+        if m.config.ExternalInterface != "" &amp;&amp; m.config.InternalInterface != "" </span><span class="cov0" title="0">{
+                content += fmt.Sprintf("External: %s → Internal: %s\n", m.config.ExternalInterface, m.config.InternalInterface)
+                content += fmt.Sprintf("Network: %s.0/24\n\n", m.config.InternalNetwork)
+        }</span> else<span class="cov0" title="0"> {
+                content += "⚠️  Please configure interfaces before starting NAT\n\n"
+        }</span>
+
+        <span class="cov0" title="0">content += "1. Configure Interfaces\n"
+        content += "2. Configure NAT Settings\n"
+        content += "3. Start NAT\n"
+        content += "4. Monitor Connections\n"
+        content += "5. Stop NAT\n\n"
+
+        if m.err != nil </span><span class="cov0" title="0">{
+                content += errorStyle.Render(fmt.Sprintf("Error: %s", m.err)) + "\n\n"
+        }</span>
+
+        <span class="cov0" title="0">content += helpStyle.Render("Press number to select, 'q' to quit")
+        return content</span>
+}
+
+func (m Model) interfacesView() string <span class="cov0" title="0">{
+        content := titleStyle.Render("Network Interfaces") + "\n\n"
+
+        if m.config.ExternalInterface != "" || m.config.InternalInterface != "" </span><span class="cov0" title="0">{
+                content += fmt.Sprintf("Current selection - External: %s | Internal: %s\n\n",
+                        m.config.ExternalInterface, m.config.InternalInterface)
+        }</span>
+
+        <span class="cov0" title="0">content += m.list.View() + "\n\n"
+
+        // Show interface recommendations
+        content += "💡 Recommendations:\n"
+        content += "   External: Use active interfaces with internet (en0, en1)\n"
+        content += "   Internal: Use bridge interfaces (bridge100, bridge101)\n\n"
+
+        content += helpStyle.Render("'e' set external, 'i' set internal, 'r' refresh, 'esc' back")
+        return content</span>
+}
+
+func (m Model) configView() string <span class="cov0" title="0">{
+        content := titleStyle.Render("NAT Configuration") + "\n\n"
+
+        // Interface configuration
+        content += "🔌 Interfaces:\n"
+        content += fmt.Sprintf("   External: %s\n", getConfigValue(m.config.ExternalInterface, "Not set"))
+        content += fmt.Sprintf("   Internal: %s\n\n", getConfigValue(m.config.InternalInterface, "Not set"))
+
+        // Network configuration
+        content += "🌐 Network Settings:\n"
+        content += fmt.Sprintf("1. Internal Network: %s.0/24\n", m.config.InternalNetwork)
+        content += fmt.Sprintf("2. DHCP Start: %s\n", m.config.DHCPRange.Start)
+        content += fmt.Sprintf("3. DHCP End: %s\n", m.config.DHCPRange.End)
+        content += fmt.Sprintf("   DHCP Lease: %s\n", m.config.DHCPRange.Lease)
+        content += fmt.Sprintf("   DNS Servers: %s\n\n", strings.Join(m.config.DNSServers, ", "))
+
+        // Status
+        if m.config.ExternalInterface != "" &amp;&amp; m.config.InternalInterface != "" </span><span class="cov0" title="0">{
+                content += successStyle.Render("✅ Configuration ready") + "\n\n"
+        }</span> else<span class="cov0" title="0"> {
+                content += errorStyle.Render("❌ Missing interface configuration") + "\n\n"
+        }</span>
+
+        <span class="cov0" title="0">content += helpStyle.Render("Press number to edit, 'esc' to go back")
+        return content</span>
+}
+
+func (m Model) monitorView() string <span class="cov0" title="0">{
+        content := titleStyle.Render("Connection Monitor") + "\n\n"
+
+        // Show current configuration
+        content += fmt.Sprintf("🔗 %s (%s) → %s (%s.1/24)\n\n",
+                m.config.ExternalInterface,
+                getExternalIP(m.manager),
+                m.config.InternalInterface,
+                m.config.InternalNetwork)
+
+        // Connection count
+        content += fmt.Sprintf("📊 Active connections: %d\n\n", len(m.connections))
+
+        // Connections table
+        if len(m.connections) &gt; 0 </span><span class="cov0" title="0">{
+                content += m.table.View() + "\n\n"
+        }</span> else<span class="cov0" title="0"> {
+                content += "No active connections\n\n"
+        }</span>
+
+        // Statistics
+        <span class="cov0" title="0">if status, err := m.manager.GetStatus(); err == nil </span><span class="cov0" title="0">{
+                content += fmt.Sprintf("📈 Uptime: %s\n", status.Uptime)
+                content += fmt.Sprintf("📱 Connected devices: %d\n\n", len(status.ConnectedDevices))
+        }</span>
+
+        <span class="cov0" title="0">content += helpStyle.Render("'r' refresh, 'esc' back")
+        return content</span>
+}
+
+func (m Model) inputView() string <span class="cov0" title="0">{
+        content := titleStyle.Render("Edit Configuration") + "\n\n"
+
+        fieldName := ""
+        fieldDescription := ""
+
+        switch m.inputField </span>{
+        case "network":<span class="cov0" title="0">
+                fieldName = "Internal Network"
+                fieldDescription = "Network prefix for internal devices (e.g., 192.168.100)"</span>
+        case "dhcp_start":<span class="cov0" title="0">
+                fieldName = "DHCP Range Start"
+                fieldDescription = "First IP address in DHCP range (e.g., 192.168.100.100)"</span>
+        case "dhcp_end":<span class="cov0" title="0">
+                fieldName = "DHCP Range End"
+                fieldDescription = "Last IP address in DHCP range (e.g., 192.168.100.200)"</span>
+        }
+
+        <span class="cov0" title="0">content += fmt.Sprintf("Field: %s\n", fieldName)
+        content += fmt.Sprintf("Description: %s\n\n", fieldDescription)
+        content += m.textInput.View() + "\n\n"
+        content += helpStyle.Render("Enter to save, Esc to cancel")
+        return content</span>
+}
+
+// Helper functions
+func getConfigValue(value, defaultText string) string <span class="cov0" title="0">{
+        if value == "" </span><span class="cov0" title="0">{
+                return errorStyle.Render(defaultText)
+        }</span>
+        <span class="cov0" title="0">return successStyle.Render(value)</span>
+}
+
+func getExternalIP(manager *nat.Manager) string <span class="cov0" title="0">{
+        if status, err := manager.GetStatus(); err == nil </span><span class="cov0" title="0">{
+                return status.ExternalIP
+        }</span>
+        <span class="cov0" title="0">return "N/A"</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
